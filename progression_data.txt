@@ -1,0 +1,22 @@
+I, V, vi, IV, 20
+I, V, vi, iii, 5
+vi, V, IV, V, 5
+I, vi, IV, V, 5
+I, IV, vi, V, 5
+I, V, IV, V, 5
+vi, IV, I, V, 20
+vi, iii, I, V, 5
+vi, IV, V, I, 5
+vi, V, I, IV, 5
+ii, V, I, I, 20
+I, V, 5
+vi, IV, 10
+I, I, V, vi, 5
+I, I, iii, vi, 5
+vi, vi, I, iii, 5
+I, I, IV, V, 5
+I, III, vi, IV, 20
+III, IV, I, V, 20
+I, ii, IV, V, 10
+I, vi, ii, V, 10
+
