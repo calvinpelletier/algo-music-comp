@@ -1,0 +1,31 @@
+I	I	iii	vi	25
+I	I	IV	V	50
+I	I	V	vi	25
+I	ii	IV	V	50
+I	III	vi	IV	100
+I	IV	50
+I	IV	I	iii	50
+I	IV	vi	V	100
+I	V	50
+I	V	IV	V	50
+I	V	vi	iii	100
+I	V	vi	IV	250
+I	V	vi	V	50
+I	vi	50
+I	vi	ii	IV	50
+I	vi	ii	V	100
+I	vi	IV	iii	25
+I	vi	IV	V	100
+ii	V	I	I	150
+ii	V	I	ii	50
+ii	V	I	V	50
+III	IV	I	V	100
+vi	iii	I	V	50
+vi	IV	100
+vi	IV	I	iii	50
+vi	IV	I	III	150
+vi	IV	I	V	200
+vi	IV	V	I	100
+vi	V	I	IV	100
+vi	V	IV	V	100
+vi	vi	I	iii	25
