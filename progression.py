@@ -99,10 +99,7 @@ def print_n_progressions(root, n):
     for key in dict:
         print("%d\t%s" % (dict[key], key))
 
-
-root = build_decision_tree(2, 4, 1, ['I', 'ii', 'iii', 'III', 'IV', 'V', 'vi'])
-teach_decision_tree("progression_data.txt", root)
-print_n_progressions(root, 100000)
-#progression = create_progression(root)
-#print(progression)
-#print_tree(root, 0)
+def std_initialization():
+    root = build_decision_tree(2, 6, 1, ['I', 'ii', 'iii', 'III', 'IV', 'V', 'vi'])
+    teach_decision_tree("progression_data.txt", root)
+    return root
