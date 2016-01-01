@@ -62,7 +62,7 @@ def teach_decision_tree(file, root):
                 connection.weight += int(line[len(line) - 1])
     csvfile.close()
 
-def create_progression(root):
+def create_progression(root, double_progession):
     temp = root
     ret = []
     while 1:
@@ -86,6 +86,32 @@ def create_progression(root):
                 if temp.data != 'END':
                     ret.append(temp.data)
                 break
+    #append a second progression if desired (common in many songs to have an 8-chord progression built from two 4 chord progressions)
+    if double_progession:
+        ret2 = []
+        temp = root
+        while 1:
+            # base case
+            if temp.data == 'END':
+                break;
+            # find random number
+            total = 0
+            for connection in temp.children:
+                total += connection.weight
+            if total == 1:
+                rand = 0
+            else:
+                rand = randint(0, total - 1)
+            # choose chord based on random number
+            total = 0
+            for connection in temp.children:
+                total += connection.weight
+                if rand < total:
+                    temp = connection.to_node
+                    if temp.data != 'END':
+                        ret.append(temp.data)
+                    break
+        ret += ret2
     return ret
 
 def print_n_progressions(root, n):
