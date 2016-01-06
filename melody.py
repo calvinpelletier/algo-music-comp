@@ -3,17 +3,23 @@
 # 1/1/16
 
 from random import randint
+import progression
 
 # melody in string format: x 1,1 - 1,2 - - x x 3,1
 # x is a rest, - is a continuation of the previous note, 1,2 is the 1 note (relative to key) in the 2nd octave
 # melody in int array format: 0 is -, -1 is x, 1 is 1,1, 8 is 1,2
 
 class Melody:
-    def __init__(self, str_melody, arr_melody):
+    energy = 0.0
+    progression = []
+    progression_dissonance = 0.0
+    key_dissonance = 0.0
+    def __init__(self, str_melody, arr_melody, minor):
         self.str_melody = str_melody
         self.arr_melody = arr_melody
+        self.minor = minor
 
-def create_random_melody():
+def create_random_melody(length):
     MAX_LEAP = 7
     MAX_RANGE = 11
     UPPER_NOTE_BOUND = 40
@@ -24,10 +30,11 @@ def create_random_melody():
     LOWER_START_NOTE_BOUND = 22
     CHANCE_OF_REST = 0.1
     CHANCE_OF_EXTENSION = 0.4
+    MINOR_CHANCE = 0.5
     str_melody = ''
     arr_melody = []
-    length = randint(32,64)
     prev_note = -1
+
     min_note = -1
     max_note = -1
     for i in range(length):
@@ -43,9 +50,13 @@ def create_random_melody():
             if rand < CHANCE_OF_REST:
                 arr_melody.append(-1)
                 str_melody += ' x'
-            else if rand < CHANCE_OF_REST + CHANCE_OF_EXTENSION:
-                arr_melody.append(0)
-                str_melody += ' -'
+            elif rand < CHANCE_OF_REST + CHANCE_OF_EXTENSION:
+                if arr_melody[len(arr_melody) - 1] == -1:
+                    arr_melody.append(-1)
+                    str_melody += ' x'
+                else:
+                    arr_melody.append(0)
+                    str_melody += ' -'
             else:
                 note = randint(max(LOWER_NOTE_BOUND, prev_note - MAX_LEAP, max_note - MAX_RANGE), min(UPPER_NOTE_BOUND, prev_note + MAX_LEAP, min_note + MAX_RANGE))
                 min_note = min(min_note, note)
@@ -53,7 +64,7 @@ def create_random_melody():
                 arr_melody.append(note)
                 str_melody += ' ' + exact_note_to_note_octave(note)
                 prev_note = note
-    return Melody(str_melody, arr_melody)
+    return Melody(str_melody, arr_melody, randint(0, 100) / 100.0 < MINOR_CHANCE)
 
 # average of intervals divided by durations
 # high means sporatic melody
@@ -75,22 +86,87 @@ def energy(arr_melody):
             duration = 1
         else:
             duration += 1
+    total += (abs(last_note - instant) + 1) / float(duration)
+    return total / float(len(arr_melody))
+    # return total / float(num_notes)
+
+
+# average of notes being within/not within the chord progression times the duration
+# high means dissonant melody
+def progression_dissonance(arr_melody, chord_progression):
+    INSTANTS_PER_CHORD = 8
+    instants_per_progression = INSTANTS_PER_CHORD * len(chord_progression)
+    num_notes = 0
+    total = 0
+    i = 0
+    while i < len(arr_melody):
+        if arr_melody[i] == 0 or arr_melody[i] == -1:
+            i += 1
+        else:
+            num_notes += 1
+            note = (arr_melody[i] - 1) % 7 + 1
+            chord = chord_progression[(i % instants_per_progression) / INSTANTS_PER_CHORD]
+            duration = 1
+            i += 1
+            while i < len(arr_melody):
+                if arr_melody[i] == 0:
+                    if chord != chord_progression[(i % instants_per_progression) / INSTANTS_PER_CHORD]:
+                        if not progression.note_in_chord(note, chord):
+                            total += duration
+                        chord = chord_progression[(i % instants_per_progression) / INSTANTS_PER_CHORD]
+                        i += 1
+                        duration = 1
+                    else:
+                        i += 1
+                        duration += 1
+                else:
+                    break
+            if not progression.note_in_chord(note, chord):
+                total += duration
+    #return total / float(len(arr_melody))
     return total / float(num_notes)
 
 
-# average of notes being within/not within the chord progression divided by the duration
-# high means dissonant melody
-def dissonance(melody):
+def key_dissonance(arr_melody, minor):
+    # favors 1 and 5 primarily, then the pentatonic scale
+    #                    1    2    3    4    5    6    7
+    DISSONANCE_MAJOR = [0.0, 0.4, 0.4, 0.7, 0.2, 0.4, 1.0]
+    DISSONANCE_MINOR = [0.4, 0.4, 0.2, 0.7, 0.4, 0.0, 1.0]
+
+    num_notes = 0
+    total = 0
+    i = 0
+    while i < len(arr_melody):
+        if arr_melody == 0 or arr_melody == -1:
+            i += 1
+        else:
+            num_notes += 1
+            note = (arr_melody[i] - 1) % 7 + 1
+            if minor:
+                dissonance = DISSONANCE_MINOR[note - 1]
+            else:
+                dissonance = DISSONANCE_MAJOR[note - 1]
+            duration = 1
+            i += 1
+            while i < len(arr_melody):
+                if arr_melody[i] == 0:
+                    i += 1
+                    duration += 1
+                else:
+                    break
+            total += dissonance * duration
+    # return total / float(len(arr_melody))
+    return total / float(num_notes)
 
 # amount of repetition in the melody
-def thematic(melody):
+#def thematic(melody):
 
 # amount of notes placed on the strong beats, weighted by their duration.
-def rhythmic(melody):
+# def rhythmic(arr_melody):
 
-def rhythmic_variation(melody):
+#def rhythmic_variation(melody):
 
-def tonal_variation(melody):
+#def tonal_variation(melody):
 
 # returns int array
 def array_from_string(melody):
@@ -99,14 +175,14 @@ def array_from_string(melody):
     while i < len(melody):
         if melody[i] == ' ':
             i += 1
-        else if melody[i] == 'x':
+        elif melody[i] == 'x':
             ret.append(-1)
             i += 2
-        else if melody[i] == '-':
+        elif melody[i] == '-':
             ret.append(0)
             i += 2
         else:
-            ret.append(note_octave_to_exact_note(melody[i], melody[i+2]))
+            ret.append(note_octave_to_exact_note(int(melody[i]), int(melody[i+2])))
             i += 4
     return ret
 
@@ -121,12 +197,35 @@ def exact_note_to_note_octave(note):
 
 def print_examples():
     dict = {}
+    # 100 Years by Five for Fighting
     one_hundred_years = "x 1,5 - 1,5 - 3,4 - 4,4 - - 4,4 3,4 4,4 5,4 x x x x 1,5 1,5 - 3,4 - 4,4 - - 4,4 3,4 4,4 5,4 4,4 3,4 - 1,5 - 1,5 - 5,4 - 3,4 - - x x 3,4 4,4 5,4 6,4 - - x 3,4 3,4 3,4 - 3,4 - 2,4 x x x x x x"
-    dict['one_hundred_years'] = Melody(one_hundred_years, array_from_string(one_hundred_years))
+    dict['one_hundred_years'] = Melody(one_hundred_years, array_from_string(one_hundred_years), False)
+    dict['one_hundred_years'].progression = ['I', 'IV', 'ii', 'V', 'I', 'vi', 'ii', 'IV']
+    # Test
+    test = "1,4 1,4 - - x x 1,4 - - - - - - - - - 1,4 x x x x x x 1,4 - 1,4 - 1,4 - - 1,4 - -"
+    dict['test'] = Melody(test, array_from_string(test), False)
+    dict['test'].progression = ['I', 'I']
     for key in dict:
-        print("%s: %s\nenergy: %d\n", % (key, dict[key].str_melody, energy(dict[key].arr_melody)))
+        print("%s: %s\nprogression: %s\nenergy: %f\nprogression_dissonance: %f\nkey_dissonance: %f\n" % (key, dict[key].str_melody, '-'.join(dict[key].progression), energy(dict[key].arr_melody), progression_dissonance(dict[key].arr_melody, dict[key].progression), key_dissonance(dict[key].arr_melody, dict[key].minor)))
 
-def print_n_random_melodies(n):
+def print_n_random_melodies(n, sort_by):
+    melodies = []
+    root = progression.std_initialization()
     for i in range(n):
-        melody = create_random_melody()
-        print("random: %s\nenergy: %d\n", % (melody.str_melody, energy(melody.arr_melody)))
+        melody = create_random_melody(64)
+        melody.progression = progression.create_progression(root, 0.2)
+        melody.energy = energy(melody.arr_melody)
+        melody.progression_dissonance = progression_dissonance(melody.arr_melody, melody.progression)
+        melody.key_dissonance = key_dissonance(melody.arr_melody, melody.progression)
+        melodies.append(melody)
+    sorted_melodies = []
+    if sort_by == 'energy':
+        sorted_melodies = sorted(melodies, key=lambda melody:melody.energy)
+    elif sort_by == 'progression_dissonance':
+        sorted_melodies = sorted(melodies, key=lambda melody:melody.progression_dissonance)
+    elif sort_by == 'key_dissonance':
+        sorted_melodies = sorted(melodies, key=lambda melody:melody.key_dissonance)
+    else:
+        sorted_melodies = melodies
+    for melody in sorted_melodies:
+        print("random: %s\nprogression: %s\nenergy: %f\nprogression_dissonance: %f\nkey_dissonance: %f\n" % (melody.str_melody, '-'.join(melody.progression), melody.energy, melody.progression_dissonance, melody.key_dissonance))

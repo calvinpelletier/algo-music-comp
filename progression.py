@@ -62,7 +62,7 @@ def teach_decision_tree(file, root):
                 connection.weight += int(line[len(line) - 1])
     csvfile.close()
 
-def create_progression(root, double_progession):
+def create_progression(root, double_progession_chance):
     temp = root
     ret = []
     while 1:
@@ -87,7 +87,7 @@ def create_progression(root, double_progession):
                     ret.append(temp.data)
                 break
     #append a second progression if desired (common in many songs to have an 8-chord progression built from two 4 chord progressions)
-    if double_progession:
+    if (randint(0,100) / 100.0) < double_progession_chance:
         ret2 = []
         temp = root
         while 1:
@@ -129,3 +129,27 @@ def std_initialization():
     root = build_decision_tree(2, 6, 1, ['I', 'ii', 'iii', 'III', 'IV', 'V', 'vi'])
     teach_decision_tree("progression_data.txt", root)
     return root
+
+def note_in_chord(note, chord):
+    if chord == 'I':
+        if note == 1 or note == 3 or note == 5:
+            return True
+    elif chord == 'ii':
+        if note == 2 or note == 4 or note == 5:
+            return True
+    elif chord == 'iii':
+        if note == 3 or note == 5 or note == 7:
+            return True
+    elif chord == 'III':
+        if note == 3 or note == 7:
+            return True
+    elif chord == 'IV':
+        if note == 4 or note == 6 or note == 1:
+            return True
+    elif chord == 'V':
+        if note == 5 or note == 7 or note == 2:
+            return True
+    elif chord == 'vi':
+        if note == 6 or note == 1 or note == 3:
+            return True
+    return False
