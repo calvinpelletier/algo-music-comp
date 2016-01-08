@@ -14,10 +14,12 @@ class Melody:
     progression = []
     progression_dissonance = 0.0
     key_dissonance = 0.0
-    def __init__(self, str_melody, arr_melody, minor):
+    rhythmic = 0.0
+    def __init__(self, str_melody, arr_melody, minor, rhythmic_style):
         self.str_melody = str_melody
         self.arr_melody = arr_melody
         self.minor = minor
+        self.rhythmic_style = rhythmic_style
 
 def create_random_melody(length):
     MAX_LEAP = 7
@@ -64,7 +66,7 @@ def create_random_melody(length):
                 arr_melody.append(note)
                 str_melody += ' ' + exact_note_to_note_octave(note)
                 prev_note = note
-    return Melody(str_melody, arr_melody, randint(0, 100) / 100.0 < MINOR_CHANCE)
+    return Melody(str_melody, arr_melody, randint(0, 100) / 100.0 < MINOR_CHANCE, 0)
 
 # average of intervals divided by durations
 # high means sporatic melody
@@ -89,7 +91,6 @@ def energy(arr_melody):
     total += (abs(last_note - instant) + 1) / float(duration)
     return total / float(len(arr_melody))
     # return total / float(num_notes)
-
 
 # average of notes being within/not within the chord progression times the duration
 # high means dissonant melody
@@ -126,7 +127,6 @@ def progression_dissonance(arr_melody, chord_progression):
     #return total / float(len(arr_melody))
     return total / float(num_notes)
 
-
 def key_dissonance(arr_melody, minor):
     # favors 1 and 5 primarily, then the pentatonic scale
     #                    1    2    3    4    5    6    7
@@ -137,7 +137,7 @@ def key_dissonance(arr_melody, minor):
     total = 0
     i = 0
     while i < len(arr_melody):
-        if arr_melody == 0 or arr_melody == -1:
+        if arr_melody[i] == 0 or arr_melody[i] == -1:
             i += 1
         else:
             num_notes += 1
@@ -162,7 +162,34 @@ def key_dissonance(arr_melody, minor):
 #def thematic(melody):
 
 # amount of notes placed on the strong beats, weighted by their duration.
-# def rhythmic(arr_melody):
+def rhythmic(arr_melody, style):
+    #                       1   and   2   and   3   and   4   and
+    RHYTHMIC_STYLE = []
+    RHYTHMIC_STYLE.append([1.0, 0.0, 0.5, 0.0, 1.0, 0.0, 0.5, 0.0]) # style 0
+    RHYTHMIC_STYLE.append([0.0, 1.0, 0.0, 0.5, 0.0, 1.0, 0.0, 0.5]) # style 1
+    RHYTHMIC_STYLE.append([0.5, 0.0, 1.0, 0.0, 0.5, 0.0, 1.0, 0.0]) # style 2
+    RHYTHMIC_STYLE.append([0.0, 0.5, 0.0, 1.0, 0.0, 5.0, 0.0, 1.0]) # style 3
+
+    num_notes = 0
+    total = 0
+    i = 0
+    while i < len(arr_melody):
+        if arr_melody[i] == 0 or arr_melody[i] == -1:
+            i += 1
+        else:
+            num_notes += 1
+            strength = RHYTHMIC_STYLE[style][i % 8]
+            duration = 1
+            i += 1
+            while i < len(arr_melody):
+                if arr_melody[i] == 0:
+                    i += 1
+                    duration += 1
+                else:
+                    break
+            total += strength * duration
+    # return total / float(len(arr_melody))
+    return total / float(num_notes)
 
 #def rhythmic_variation(melody):
 
@@ -199,14 +226,14 @@ def print_examples():
     dict = {}
     # 100 Years by Five for Fighting
     one_hundred_years = "x 1,5 - 1,5 - 3,4 - 4,4 - - 4,4 3,4 4,4 5,4 x x x x 1,5 1,5 - 3,4 - 4,4 - - 4,4 3,4 4,4 5,4 4,4 3,4 - 1,5 - 1,5 - 5,4 - 3,4 - - x x 3,4 4,4 5,4 6,4 - - x 3,4 3,4 3,4 - 3,4 - 2,4 x x x x x x"
-    dict['one_hundred_years'] = Melody(one_hundred_years, array_from_string(one_hundred_years), False)
+    dict['one_hundred_years'] = Melody(one_hundred_years, array_from_string(one_hundred_years), False, 1)
     dict['one_hundred_years'].progression = ['I', 'IV', 'ii', 'V', 'I', 'vi', 'ii', 'IV']
     # Test
     test = "1,4 1,4 - - x x 1,4 - - - - - - - - - 1,4 x x x x x x 1,4 - 1,4 - 1,4 - - 1,4 - -"
-    dict['test'] = Melody(test, array_from_string(test), False)
+    dict['test'] = Melody(test, array_from_string(test), False, 0)
     dict['test'].progression = ['I', 'I']
     for key in dict:
-        print("%s: %s\nprogression: %s\nenergy: %f\nprogression_dissonance: %f\nkey_dissonance: %f\n" % (key, dict[key].str_melody, '-'.join(dict[key].progression), energy(dict[key].arr_melody), progression_dissonance(dict[key].arr_melody, dict[key].progression), key_dissonance(dict[key].arr_melody, dict[key].minor)))
+        print("%s: %s\nprogression: %s\nenergy: %f\nprogression_dissonance: %f\nkey_dissonance: %f\nrhythmic: %f\n" % (key, dict[key].str_melody, '-'.join(dict[key].progression), energy(dict[key].arr_melody), progression_dissonance(dict[key].arr_melody, dict[key].progression), key_dissonance(dict[key].arr_melody, dict[key].minor), rhythmic(dict[key].arr_melody, dict[key].rhythmic_style)))
 
 def print_n_random_melodies(n, sort_by):
     melodies = []
@@ -217,6 +244,7 @@ def print_n_random_melodies(n, sort_by):
         melody.energy = energy(melody.arr_melody)
         melody.progression_dissonance = progression_dissonance(melody.arr_melody, melody.progression)
         melody.key_dissonance = key_dissonance(melody.arr_melody, melody.progression)
+        melody.rhythmic = rhythmic(melody.arr_melody, melody.rhythmic_style)
         melodies.append(melody)
     sorted_melodies = []
     if sort_by == 'energy':
@@ -225,7 +253,9 @@ def print_n_random_melodies(n, sort_by):
         sorted_melodies = sorted(melodies, key=lambda melody:melody.progression_dissonance)
     elif sort_by == 'key_dissonance':
         sorted_melodies = sorted(melodies, key=lambda melody:melody.key_dissonance)
+    elif sort_by == 'rhythmic':
+        sorted_melodies = sorted(melodies, key=lambda melody:melody.rhythmic)
     else:
         sorted_melodies = melodies
     for melody in sorted_melodies:
-        print("random: %s\nprogression: %s\nenergy: %f\nprogression_dissonance: %f\nkey_dissonance: %f\n" % (melody.str_melody, '-'.join(melody.progression), melody.energy, melody.progression_dissonance, melody.key_dissonance))
+        print("random: %s\nprogression: %s\nenergy: %f\nprogression_dissonance: %f\nkey_dissonance: %f\nrhythmic: %f\n" % (melody.str_melody, '-'.join(melody.progression), melody.energy, melody.progression_dissonance, melody.key_dissonance, melody.rhythmic))
