@@ -16,16 +16,17 @@ I	vi	ii	IV	50
 I	vi	ii	V	100
 I	vi	IV	iii	25
 I	vi	IV	V	100
-ii	V	I	I	150
+ii	V	I	I	100
 ii	V	I	ii	50
 ii	V	I	V	50
 III	IV	I	V	100
 vi	iii	I	V	50
 vi	IV	100
 vi	IV	I	iii	50
-vi	IV	I	III	150
+vi	IV	I	III	100
 vi	IV	I	V	200
 vi	IV	V	I	100
 vi	V	I	IV	100
+vi	V	IV	iii	100
 vi	V	IV	V	100
 vi	vi	I	iii	25
