@@ -5,8 +5,8 @@
 from random import randint
 import progression
 
-# melody in string format: x 1,1 - 1,2 - - x x 3,1
-# x is a rest, - is a continuation of the previous note, 1,2 is the 1 note (relative to key) in the 2nd octave
+# melody in string format: x 1,1 - 1,2 - - x x | 3,1
+# | is a measure divider, x is a rest, - is a continuation of the previous note, 1,2 is the 1 note (relative to key) in the 2nd octave
 # melody in int array format: 0 is -, -1 is x, 1 is 1,1, 8 is 1,2
 
 class Melody:
@@ -23,40 +23,39 @@ class Melody:
     key_dissonance = 0.0
     thematic = 0.0 # amount of repetition
 
-    # INITIALIZATION FUNCTIONS
-    def __init__(self, str_melody):
-        self.str_melody = str_melody
-        self.arr_melody = []
-        i = 0
-        while i < len(str_melody):
-            if str_melody[i] == '|':
-                i += 2
-            elif str_melody[i] == 'x':
-                arr_melody.append(-1)
-                i += 2
-            elif str_melody[i] == '-':
-                arr_melody.append(0)
-                i += 2
-            elif str_melody[i] >= '0' and str_melody[i] <= '9':
-                if str_melody[i+1] != ',' or str_melody[i+2] < '0' or str_melody[i+2] > '9':
-                    raise NameError("Unexpected character when parsing melody")
-                arr_melody.append(note_octave_to_exact_note(int(str_melody[i]), int(str_melody[i+2])))
-                i += 4
-            else:
-                raise NameError("Unexpected character when parsing melody")
-
+    # INITIALIZATION FUNCTION
     def __init__(self, str_melody, arr_melody):
         self.str_melody = str_melody
-        self.arr_melody = arr_melody
+        if len(arr_melody) != 0:
+            self.arr_melody = arr_melody
+        else:
+            self.arr_melody = []
+            i = 0
+            while i < len(str_melody):
+                if str_melody[i] == '|':
+                    i += 2
+                elif str_melody[i] == 'x':
+                    self.arr_melody.append(-1)
+                    i += 2
+                elif str_melody[i] == '-':
+                    self.arr_melody.append(0)
+                    i += 2
+                elif str_melody[i] >= '0' and str_melody[i] <= '9':
+                    if str_melody[i+1] != ',' or str_melody[i+2] < '0' or str_melody[i+2] > '9':
+                        raise NameError("Unexpected character when parsing melody")
+                    self.arr_melody.append(note_octave_to_exact_note(int(str_melody[i]), int(str_melody[i+2])))
+                    i += 4
+                else:
+                    raise NameError("Unexpected character when parsing melody")
 
     # CHARACTERISTIC FUNCTIONS
-    def calculate_all_characteristics():
+    def calculate_all_characteristics(self):
         self.energy()
         self.progression_dissonance()
         self.key_dissonance()
         self.rhythmic()
 
-    def energy():
+    def energy(self):
         num_notes = 0
         total = 0
         duration = -1
@@ -74,11 +73,10 @@ class Melody:
                 duration = 1
             else:
                 duration += 1
-        total += (abs(last_note - instant) + 1) / float(duration)
         self.energy = total / float(len(self.arr_melody))
         # return total / float(num_notes)
 
-    def progression_dissonance():
+    def progression_dissonance(self):
         if len(self.progression) == 0:
             raise NameError("Tried to calculate progression dissonance without first specifying a progression.")
         INSTANTS_PER_CHORD = 8
@@ -113,7 +111,7 @@ class Melody:
         #return total / float(len(arr_melody))
         self.progression_dissonance = total / float(num_notes)
 
-    def key_dissonance():
+    def key_dissonance(self):
         # favors 1 and 5 primarily, then the pentatonic scale
         #                    1    2    3    4    5    6    7
         DISSONANCE_MAJOR = [0.0, 0.4, 0.4, 0.7, 0.2, 0.4, 1.0]
@@ -146,7 +144,7 @@ class Melody:
 
     #def thematic(arr_melody):
 
-    def rhythmic():
+    def rhythmic(self):
         #                       1   and   2   and   3   and   4   and
         RHYTHMIC_STYLE = []
         RHYTHMIC_STYLE.append([1.0, 0.0, 0.5, 0.0, 1.0, 0.0, 0.5, 0.0]) # style 0
@@ -179,15 +177,14 @@ class Melody:
 
     #def tonal_variation(melody):
 
-    # HELPER FUNCTIONS
-    def note_octave_to_exact_note(note, octave):
-        return note + 7 * (octave - 1)
+def note_octave_to_exact_note(note, octave):
+    return note + 7 * (octave - 1)
 
-    # returns in str format: 1,4
-    def exact_note_to_note_octave(note):
-        octave = (note - 1) / 7 + 1
-        note_in_octave = (note - 1) % 7 + 1
-        return str(note_in_octave) + ',' + str(octave)
+# returns in str format: 1,4
+def exact_note_to_note_octave(note):
+    octave = (note - 1) / 7 + 1
+    note_in_octave = (note - 1) % 7 + 1
+    return str(note_in_octave) + ',' + str(octave)
 
 def create_random_melody(length):
     MAX_LEAP = 7
@@ -248,17 +245,27 @@ def print_melody(melody):
        % (melody.title, '-'.join(melody.progression), melody.str_melody, melody.energy, melody.progression_dissonance, melody.key_dissonance, melody.rhythmic))
 
 def run_test_data():
-    dict = {}
-    # 100 Years by Five for Fighting
-    one_hundred_years = "x 1,5 - 1,5 - 3,4 - 4,4 - - 4,4 3,4 4,4 5,4 x x x x 1,5 1,5 - 3,4 - 4,4 - - 4,4 3,4 4,4 5,4 4,4 3,4 - 1,5 - 1,5 - 5,4 - 3,4 - - x x 3,4 4,4 5,4 6,4 - - x 3,4 3,4 3,4 - 3,4 - 2,4 x x x x x x"
-    dict['one_hundred_years'] = Melody(one_hundred_years, array_from_string(one_hundred_years), False, 1)
-    dict['one_hundred_years'].progression = ['I', 'IV', 'ii', 'V', 'I', 'vi', 'ii', 'IV']
-    # Test
-    test = "1,4 1,4 - - x x 1,4 - - - - - - - - - 1,4 x x x x x x 1,4 - 1,4 - 1,4 - - 1,4 - -"
-    dict['test'] = Melody(test, array_from_string(test), False, 0)
-    dict['test'].progression = ['I', 'I']
-    for key in dict:
-        print("%s: %s\nprogression: %s\nenergy: %f\nprogression_dissonance: %f\nkey_dissonance: %f\nrhythmic: %f\n" % (key, dict[key].str_melody, '-'.join(dict[key].progression), energy(dict[key].arr_melody), progression_dissonance(dict[key].arr_melody, dict[key].progression), key_dissonance(dict[key].arr_melody, dict[key].minor), rhythmic(dict[key].arr_melody, dict[key].rhythmic_style)))
+    melody_data = open('melody_data.txt', 'r')
+    while 1:
+        title = melody_data.readline().rstrip('\n')
+        majorminor = melody_data.readline().rstrip('\n')
+        rhythmic_style = melody_data.readline().rstrip('\n')
+        melody = melody_data.readline().rstrip('\n')
+        progression = melody_data.readline().rstrip('\n')
+        if title == '' or majorminor == '' or melody == '' or progression == '':
+            break
+        temp = Melody(melody, [])
+        temp.title = title
+        if majorminor == 'major' or majorminor == 'Major':
+            temp.minor = False
+        elif majorminor == 'minor' or majorminor == 'Minor':
+            temp.minor = True
+        else:
+            raise NameError("Expected result for Major/Minor when parsing melody test data")
+        temp.progression = progression.split('-')
+        temp.rhythmic_style = int(rhythmic_style)
+        temp.calculate_all_characteristics()
+        print_melody(temp)
 
 def print_n_random_melodies(n, sort_by):
     melodies = []
@@ -266,10 +273,7 @@ def print_n_random_melodies(n, sort_by):
     for i in range(n):
         melody = create_random_melody(64)
         melody.progression = progression.create_progression(root, 0.2)
-        melody.energy = energy(melody.arr_melody)
-        melody.progression_dissonance = progression_dissonance(melody.arr_melody, melody.progression)
-        melody.key_dissonance = key_dissonance(melody.arr_melody, melody.progression)
-        melody.rhythmic = rhythmic(melody.arr_melody, melody.rhythmic_style)
+        melody.calculate_all_characteristics()
         melodies.append(melody)
     sorted_melodies = []
     if sort_by == 'energy':
@@ -283,3 +287,4 @@ def print_n_random_melodies(n, sort_by):
     else:
         sorted_melodies = melodies
     for melody in sorted_melodies:
+        print_melody(melody)
