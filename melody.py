@@ -147,10 +147,10 @@ class Melody:
     def rhythmic(self):
         #                       1   and   2   and   3   and   4   and
         RHYTHMIC_STYLE = []
-        RHYTHMIC_STYLE.append([1.0, 0.0, 0.5, 0.0, 1.0, 0.0, 0.5, 0.0]) # style 0
-        RHYTHMIC_STYLE.append([0.0, 1.0, 0.0, 0.5, 0.0, 1.0, 0.0, 0.5]) # style 1
-        RHYTHMIC_STYLE.append([0.5, 0.0, 1.0, 0.0, 0.5, 0.0, 1.0, 0.0]) # style 2
-        RHYTHMIC_STYLE.append([0.0, 0.5, 0.0, 1.0, 0.0, 5.0, 0.0, 1.0]) # style 3
+        RHYTHMIC_STYLE.append([1.0, 0.0, 0.5, 0.0, 0.7, 0.0, 0.5, 0.0]) # style 0
+        RHYTHMIC_STYLE.append([0.0, 1.0, 0.0, 0.5, 0.0, 0.7, 0.0, 0.5]) # style 1
+        RHYTHMIC_STYLE.append([0.5, 0.0, 1.0, 0.0, 0.5, 0.0, 0.7, 0.0]) # style 2
+        RHYTHMIC_STYLE.append([0.0, 0.5, 0.0, 1.0, 0.0, 5.0, 0.0, 0.7]) # style 3
 
         num_notes = 0
         total = 0
