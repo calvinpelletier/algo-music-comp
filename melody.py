@@ -2,6 +2,7 @@
 # Calvin Pelletier
 # 1/1/16
 
+from music21 import *
 from random import randint
 import progression
 
@@ -10,8 +11,10 @@ import progression
 # melody in int array format: 0 is -, -1 is x, 1 is 1,1, 8 is 1,2
 
 class Melody:
+    # MELODY
+    stream = stream.Part()
+
     # HELPER INFORMATION
-    title = "Untitled"
     progression = []
     minor = False
     rhythmic_style = 0 # see rhythmic()
@@ -24,29 +27,9 @@ class Melody:
     thematic = 0.0 # amount of repetition
 
     # INITIALIZATION FUNCTION
-    def __init__(self, str_melody, arr_melody):
-        self.str_melody = str_melody
-        if len(arr_melody) != 0:
-            self.arr_melody = arr_melody
-        else:
-            self.arr_melody = []
-            i = 0
-            while i < len(str_melody):
-                if str_melody[i] == '|':
-                    i += 2
-                elif str_melody[i] == 'x':
-                    self.arr_melody.append(-1)
-                    i += 2
-                elif str_melody[i] == '-':
-                    self.arr_melody.append(0)
-                    i += 2
-                elif str_melody[i] >= '0' and str_melody[i] <= '9':
-                    if str_melody[i+1] != ',' or str_melody[i+2] < '0' or str_melody[i+2] > '9':
-                        raise NameError("Unexpected character when parsing melody")
-                    self.arr_melody.append(note_octave_to_exact_note(int(str_melody[i]), int(str_melody[i+2])))
-                    i += 4
-                else:
-                    raise NameError("Unexpected character when parsing melody")
+    def __init__(self, string=''):
+        if len(string) != 0:
+            self.stream = melody_from_string(string)
 
     # CHARACTERISTIC FUNCTIONS
     def calculate_all_characteristics(self):
@@ -177,6 +160,63 @@ class Melody:
 
     #def tonal_variation(melody):
 
+    #HELPER FUNCTIONS
+    def show(self, param):
+        self.stream.show(param)
+
+def melody_from_string(string):
+    ret = stream.Part()
+    src = string.split(' ')
+    i = 0
+    while i < len(src):
+        if src[i] == 'x':
+            cur = note.Rest()
+        elif src[i] == '-':
+            i += 1
+            continue
+        elif src[i] == '|':
+            i += 1
+            continue
+        elif len(src[i]) == 3:
+            cur = note.Note(note_from_string(src[i]))
+        else:
+            raise NameError("error parsing melody from string")
+        cur.quarterLength = 0.5
+        i += 1
+        while i < len(src):
+            if src[i] == '|':
+                if isinstance(cur, note.Rest):
+                    break
+            elif src[i] == '-':
+                cur.quarterLength += 0.5
+            elif src[i] == 'x' and isinstance(cur, note.Rest):
+                cur.quarterLength += 0.5
+            else:
+                break
+            i += 1
+        ret.append(cur)
+    ret.show('text')
+    return ret
+
+def note_from_string(string):
+    if string[0] == '1':
+        ret = 'C'
+    elif string[0] == '2':
+        ret = 'D'
+    elif string[0] == '3':
+        ret = 'E'
+    elif string[0] == '4':
+        ret = 'F'
+    elif string[0] == '5':
+        ret = 'G'
+    elif string[0] == '6':
+        ret = 'A'
+    elif string[0] == '7':
+        ret = 'B'
+    else:
+        raise NameError("error parsing note from string")
+    return ret + string[2]
+
 def note_octave_to_exact_note(note, octave):
     return note + 7 * (octave - 1)
 
@@ -254,8 +294,8 @@ def run_test_data():
         progression = melody_data.readline().rstrip('\n')
         if title == '' or majorminor == '' or melody == '' or progression == '':
             break
-        temp = Melody(melody, [])
-        temp.title = title
+        temp = Melody(string=melody)
+        temp.stream.id = title
         if majorminor == 'major' or majorminor == 'Major':
             temp.minor = False
         elif majorminor == 'minor' or majorminor == 'Minor':
@@ -264,8 +304,11 @@ def run_test_data():
             raise NameError("Expected result for Major/Minor when parsing melody test data")
         temp.progression = progression.split('-')
         temp.rhythmic_style = int(rhythmic_style)
-        temp.calculate_all_characteristics()
-        print_melody(temp)
+        temp.stream.makeMeasures(inPlace=True)
+        if temp.stream.id == "one_hundred_years":
+            temp.stream.show()
+        #temp.calculate_all_characteristics()
+        #print_melody(temp)
 
 def print_n_random_melodies(n, sort_by):
     melodies = []
