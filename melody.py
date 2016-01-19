@@ -8,11 +8,13 @@ import progression
 
 # melody in string format: x 1,1 - 1,2 - - x x | 3,1
 # | is a measure divider, x is a rest, - is a continuation of the previous note, 1,2 is the 1 note (relative to key) in the 2nd octave
-# melody in int array format: 0 is -, -1 is x, 1 is 1,1, 8 is 1,2
+
+# NOTE: EVERYTHING IS HANDLED AS IF IT'S IN THE KEY OF C MAJOR/A MINOR
+# IF IT'S IN A MINOR, 1 STILL REPRESENTS C, BUT ITS CHARACTERISTICS ACCOUNT FOR THE DIFFERENCES BETWEEN C MAJOR AND A MINOR
 
 class Melody:
     # MELODY
-    stream = stream.Part()
+    m = stream.Part()
 
     # HELPER INFORMATION
     progression = []
@@ -29,7 +31,7 @@ class Melody:
     # INITIALIZATION FUNCTION
     def __init__(self, string=''):
         if len(string) != 0:
-            self.stream = melody_from_string(string)
+            self.m = melody_from_string(string)
 
     # CHARACTERISTIC FUNCTIONS
     def calculate_all_characteristics(self):
@@ -39,91 +41,40 @@ class Melody:
         self.rhythmic()
 
     def energy(self):
-        num_notes = 0
-        total = 0
-        duration = -1
-        last_note = -1
-        for instant in self.arr_melody:
-            if last_note == -1:
-                if instant == 0 or instant == -1:
-                    continue
-                last_note = instant
-                duration = 1
-            if instant != 0 and instant != -1:
-                num_notes += 1
-                total += (abs(last_note - instant) + 1) / float(duration)
-                last_note = instant
-                duration = 1
-            else:
-                duration += 1
-        self.energy = total / float(len(self.arr_melody))
-        # return total / float(num_notes)
+        total = 0.0
+        notes = self.m.flat.getElementsByClass(note.Note)
+        for i in range(len(notes) - 1)
+            total += interval.notesToChromatic(notes[i], notes[i + 1]) / float(notes[i].quarterLength)
+        self.energy = total / float(len(notes))
 
     def progression_dissonance(self):
         if len(self.progression) == 0:
             raise NameError("Tried to calculate progression dissonance without first specifying a progression.")
-        INSTANTS_PER_CHORD = 8
-        instants_per_progression = INSTANTS_PER_CHORD * len(self.progression)
-        num_notes = 0
-        total = 0
-        i = 0
-        while i < len(self.arr_melody):
-            if self.arr_melody[i] == 0 or self.arr_melody[i] == -1:
-                i += 1
-            else:
-                num_notes += 1
-                note = (self.arr_melody[i] - 1) % 7 + 1
-                chord = self.progression[(i % instants_per_progression) / INSTANTS_PER_CHORD]
-                duration = 1
-                i += 1
-                while i < len(self.arr_melody):
-                    if self.arr_melody[i] == 0:
-                        if chord != self.progression[(i % instants_per_progression) / INSTANTS_PER_CHORD]:
-                            if not progression.note_in_chord(note, chord):
-                                total += duration
-                            chord = self.progression[(i % instants_per_progression) / INSTANTS_PER_CHORD]
-                            i += 1
-                            duration = 1
-                        else:
-                            i += 1
-                            duration += 1
-                    else:
-                        break
-                if not progression.note_in_chord(note, chord):
-                    total += duration
-        #return total / float(len(arr_melody))
-        self.progression_dissonance = total / float(num_notes)
+
+        CHORD_DURATION_DOUBLED = 8
+        progression_duration_doubled = CHORD_DURATION_DOUBLED * len(self.progression)
+
+        total = 0.0
+        for note in self.m.flat.getElementsByClass(note.Note):
+            for i in range(int(note.offset * 2), int((note.offset + note.quarterLength) * 2)):
+                chord = self.progression[(i % progression_duration_doubled) / CHORD_DURATION_DOUBLED]
+                total += progression.dissonance(chord.romanNumeral, note.name)
+        self.progression_dissonance = total / float(len(self.m.flat.getElementsByClass(note.Note)))
 
     def key_dissonance(self):
         # favors 1 and 5 primarily, then the pentatonic scale
         #                    1    2    3    4    5    6    7
-        DISSONANCE_MAJOR = [0.0, 0.4, 0.4, 0.7, 0.2, 0.4, 1.0]
-        DISSONANCE_MINOR = [0.4, 0.4, 0.2, 0.7, 0.4, 0.0, 1.0]
+        DISSONANCE_MAJOR = {'C':0.0, 'D':0.4, 'E':0.4, 'F':0.7, 'G':0.2, 'A':0.4, 'B':1.0}
+        DISSONANCE_MINOR = {'C':0.4, 'D':0.4, 'E':0.2, 'F':0.7, 'G':0.4, 'A':0.0, 'B':1.0}
 
-        num_notes = 0
-        total = 0
+        total = 0.0
         i = 0
-        while i < len(self.arr_melody):
-            if self.arr_melody[i] == 0 or self.arr_melody[i] == -1:
-                i += 1
+        for note in self.m.flat.getElementsByClass(note.Note):
+            if self.minor:
+                total += DISSONANCE_MINOR[note.name] * note.quarterLength
             else:
-                num_notes += 1
-                note = (self.arr_melody[i] - 1) % 7 + 1
-                if self.minor:
-                    dissonance = DISSONANCE_MINOR[note - 1]
-                else:
-                    dissonance = DISSONANCE_MAJOR[note - 1]
-                duration = 1
-                i += 1
-                while i < len(self.arr_melody):
-                    if self.arr_melody[i] == 0:
-                        i += 1
-                        duration += 1
-                    else:
-                        break
-                total += dissonance * duration
-        # return total / float(len(arr_melody))
-        self.key_dissonance = total / float(num_notes)
+                total += DISSONANCE_MAJOR[note.name] * note.quarterLength
+        self.key_dissonance = total / float(len(self.m.flat.getElementsByClass(note.Note)))
 
     #def thematic(arr_melody):
 
@@ -135,26 +86,10 @@ class Melody:
         RHYTHMIC_STYLE.append([0.5, 0.0, 1.0, 0.0, 0.5, 0.0, 0.7, 0.0]) # style 2
         RHYTHMIC_STYLE.append([0.0, 0.5, 0.0, 1.0, 0.0, 5.0, 0.0, 0.7]) # style 3
 
-        num_notes = 0
-        total = 0
-        i = 0
-        while i < len(self.arr_melody):
-            if self.arr_melody[i] == 0 or self.arr_melody[i] == -1:
-                i += 1
-            else:
-                num_notes += 1
-                strength = RHYTHMIC_STYLE[self.rhythmic_style][i % 8]
-                duration = 1
-                i += 1
-                while i < len(self.arr_melody):
-                    if self.arr_melody[i] == 0:
-                        i += 1
-                        duration += 1
-                    else:
-                        break
-                total += strength * duration
-        # return total / float(len(arr_melody))
-        self.rhythmic = total / float(num_notes)
+        total = 0.0
+        for note in self.m.flat.getElementsByClass(note.Note):
+            total += RHYTHMIC_STYLE[self.rhythmic_style][int(note.offset * 2) % 8] * note.quarterLength
+        self.rhythmic = total / float(len(self.m.flat.getElementsByClass(note.Note)))
 
     #def rhythmic_variation(melody):
 
@@ -195,7 +130,6 @@ def melody_from_string(string):
                 break
             i += 1
         ret.append(cur)
-    ret.show('text')
     return ret
 
 def note_from_string(string):
@@ -216,6 +150,10 @@ def note_from_string(string):
     else:
         raise NameError("error parsing note from string")
     return ret + string[2]
+
+def music21_from_exact_note(note):
+    note_dict = {1:'C', 2:'D', 3:'E', 4:'F', 5:'G', 6:'A', 7:'B'}
+    return note.Note(note_dict[(note - 1) % 7 + 1] + str((note - 1) / 7 + 1))
 
 def note_octave_to_exact_note(note, octave):
     return note + 7 * (octave - 1)
@@ -291,22 +229,24 @@ def run_test_data():
         majorminor = melody_data.readline().rstrip('\n')
         rhythmic_style = melody_data.readline().rstrip('\n')
         melody = melody_data.readline().rstrip('\n')
-        progression = melody_data.readline().rstrip('\n')
+        pre_progression = melody_data.readline().rstrip('\n')
         if title == '' or majorminor == '' or melody == '' or progression == '':
             break
         temp = Melody(string=melody)
-        temp.stream.id = title
+        temp.m.id = title
         if majorminor == 'major' or majorminor == 'Major':
             temp.minor = False
         elif majorminor == 'minor' or majorminor == 'Minor':
             temp.minor = True
         else:
             raise NameError("Expected result for Major/Minor when parsing melody test data")
-        temp.progression = progression.split('-')
+        temp.progression = progression.music21_progression_from_numerals(pre_progression.split('-'))
         temp.rhythmic_style = int(rhythmic_style)
-        temp.stream.makeMeasures(inPlace=True)
-        if temp.stream.id == "one_hundred_years":
-            temp.stream.show()
+        temp.m.makeMeasures(inPlace=True)
+        if temp.m.id == "one_hundred_years":
+            temp.m.show('midi')
+            for i in temp.m[1]:
+                print(i.quarterLength)
         #temp.calculate_all_characteristics()
         #print_melody(temp)
 

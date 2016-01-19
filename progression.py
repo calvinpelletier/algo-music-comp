@@ -4,6 +4,7 @@
 
 import csv
 from random import randint
+from music21 import *
 
 class TreeNode:
     def __init__(self, data):
@@ -130,26 +131,23 @@ def std_initialization():
     teach_decision_tree("progression_data.txt", root)
     return root
 
-def note_in_chord(note, chord):
-    if chord == 'I':
-        if note == 1 or note == 3 or note == 5:
-            return True
-    elif chord == 'ii':
-        if note == 2 or note == 4 or note == 5:
-            return True
-    elif chord == 'iii':
-        if note == 3 or note == 5 or note == 7:
-            return True
-    elif chord == 'III':
-        if note == 3 or note == 7:
-            return True
-    elif chord == 'IV':
-        if note == 4 or note == 6 or note == 1:
-            return True
-    elif chord == 'V':
-        if note == 5 or note == 7 or note == 2:
-            return True
-    elif chord == 'vi':
-        if note == 6 or note == 1 or note == 3:
-            return True
-    return False
+def music21_chord_from_numeral(numeral):
+    k = key.Key('C')
+    ret = roman.RomanNumeral(numeral, k)
+    return ret
+
+def music21_progression_from_numerals(numerals):
+    ret = []
+    for numeral in numerals:
+        ret.append(music21_chord_from_numeral(numeral))
+    return ret
+
+def dissonance(chord, note):
+    DISSONANCE['I']   = {'C':0.0, 'D':1.0, 'E':0.1, 'F':1.0, 'G':0.0, 'A':1.0, 'B':0.6}
+    DISSONANCE['ii']  = {'C':0.6, 'D':0.0, 'E':1.0, 'F':0.1, 'G':1.0, 'A':0.0, 'B':1.0}
+    DISSONANCE['iii'] = {'C':1.0, 'D':1.0, 'E':0.0, 'F':1.0, 'G':0.1, 'A':1.0, 'B':0.0}
+    DISSONANCE['III'] = {'C':1.0, 'D':1.0, 'E':0.0, 'F':1.0, 'G':9.9, 'A':1.0, 'B':0.0}
+    DISSONANCE['IV']  = {'C':0.0, 'D':1.0, 'E':0.6, 'F':0.0, 'G':1.0, 'A':0.1, 'B':1.0}
+    DISSONANCE['V']   = {'C':1.0, 'D':0.0, 'E':1.0, 'F':0.4, 'G':0.0, 'A':1.0, 'B':0.1}
+    DISSONANCE['vi']  = {'C':0.1, 'D':1.0, 'E':0.0, 'F':1.0, 'G':1.0, 'A':0.0, 'B':1.0}
+    return DISSONANCE[chord][note]
