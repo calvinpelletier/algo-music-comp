@@ -106,8 +106,11 @@ class Melody:
             ret.append(chord.romanNumeral)
         return '-'.join(ret)
 
-    def show(self, param):
-        self.m.show(param)
+    def show(self, param='default'):
+        if param == 'default':
+            self.m.show()
+        else:
+            self.m.show(param)
 
 def melody_from_string(string):
     ret = stream.Part()
@@ -161,18 +164,18 @@ def note_from_string(string):
         raise NameError("error parsing note from string")
     return ret + string[2]
 
-def music21_from_exact_note(note):
-    note_dict = {1:'C', 2:'D', 3:'E', 4:'F', 5:'G', 6:'A', 7:'B'}
-    return note.Note(note_dict[(note - 1) % 7 + 1] + str((note - 1) / 7 + 1))
+#def music21_from_exact_note(note):
+#    note_dict = {1:'C', 2:'D', 3:'E', 4:'F', 5:'G', 6:'A', 7:'B'}
+#    return note.Note(note_dict[(note - 1) % 7 + 1] + str((note - 1) / 7 + 1))
 
-def note_octave_to_exact_note(note, octave):
-    return note + 7 * (octave - 1)
+#def note_octave_to_exact_note(note, octave):
+#    return note + 7 * (octave - 1)
 
 # returns in str format: 1,4
-def exact_note_to_note_octave(note):
-    octave = (note - 1) / 7 + 1
-    note_in_octave = (note - 1) % 7 + 1
-    return str(note_in_octave) + ',' + str(octave)
+#def exact_note_to_note_octave(note):
+#    octave = (note - 1) / 7 + 1
+#    note_in_octave = (note - 1) % 7 + 1
+#    return str(note_in_octave) + ',' + str(octave)
 
 def create_random_melody():
     MAX_RANGE = 20 # in semitones
@@ -186,6 +189,7 @@ def create_random_melody():
     MINOR_CHANCE = 0.5
 
     m = stream.Part()
+    m.insert(instrument.Flute())
     length = 4.0 * randint(LOWER_LEN_BOUND, UPPER_LEN_BOUND)
     s = scale.MajorScale('C')
     start_note = note.Note(POSSIBLE_START_NOTES[randint(0, len(POSSIBLE_START_NOTES) - 1)])
@@ -211,7 +215,10 @@ def create_random_melody():
             else:
                 direction = 'descending'
             temp = s.next(notes[-1], direction, randint(1,7))
-            while temp < LOWER_NOTE_BOUND or temp > UPPER_NOTE_BOUND:
+            while   temp < LOWER_NOTE_BOUND.pitch or\
+                    temp > UPPER_NOTE_BOUND.pitch or\
+                    temp < highest_note.transpose(MAX_RANGE * -1) or\
+                    temp > lowest_note.transpose(MAX_RANGE):
                 rand = random()
                 if rand < 0.5:
                     direction = 'ascending'
@@ -219,6 +226,10 @@ def create_random_melody():
                     direction = 'descending'
                 temp = s.next(notes[-1], direction, randint(1,7))
             temp = note.Note(temp)
+            if temp.pitch < lowest_note.pitch:
+                lowest_note = temp
+            if temp.pitch > highest_note.pitch:
+                highest_note = temp
             temp.quarterLength = 0.5
             m.append(temp)
 
@@ -232,6 +243,7 @@ def print_melody(melody):
 
 def run_test_data():
     melody_data = open('melody_data.txt', 'r')
+    melodies = []
     while 1:
         title = melody_data.readline().rstrip('\n')
         majorminor = melody_data.readline().rstrip('\n')
@@ -252,14 +264,17 @@ def run_test_data():
         temp.rhythmic_style = int(rhythmic_style)
         temp.m.makeMeasures(inPlace=True)
         temp.calculate_all_characteristics()
-        print_melody(temp)
+        temp.m.insert(0,instrument.Flute())
+        melodies.append(temp)
+    return melodies
 
-def print_n_random_melodies(n, sort_by):
+def get_n_random_melodies(n, sort_by):
     melodies = []
-    root = progression.std_initialization()
+    if isinstance(progression.GLOBAL_ROOT, type(None)):
+        progression.GLOBAL_ROOT = progression.std_initialization()
     for i in range(n):
         melody = create_random_melody()
-        melody.progression = progression.music21_progression_from_numerals(progression.create_progression(root, 0.2))
+        melody.progression = progression.music21_progression_from_numerals(progression.create_progression(progression.GLOBAL_ROOT, 0.2))
         melody.calculate_all_characteristics()
         melodies.append(melody)
     sorted_melodies = []
@@ -273,5 +288,4 @@ def print_n_random_melodies(n, sort_by):
         sorted_melodies = sorted(melodies, key=lambda melody:melody.rhythmic)
     else:
         sorted_melodies = melodies
-    for melody in sorted_melodies:
-        print_melody(melody)
+    return sorted_melodies

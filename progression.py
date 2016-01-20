@@ -6,6 +6,8 @@ import csv
 from random import randint
 from music21 import *
 
+GLOBAL_ROOT = None
+
 class TreeNode:
     def __init__(self, data):
         self.children = []
@@ -35,6 +37,7 @@ def build_decision_tree(min_chords, max_chords, default_weight, viable_chords):
                 node.children.append(TreeConnection(0, TreeNode('END')))
         temp = queue
         queue = []
+    GLOBAL_ROOT = root
     return root
 
 def print_tree(node, depth):
@@ -143,6 +146,7 @@ def music21_progression_from_numerals(numerals):
     return ret
 
 def dissonance(chord, note):
+    DISSONANCE = {}
     DISSONANCE['I']   = {'C':0.0, 'D':1.0, 'E':0.1, 'F':1.0, 'G':0.0, 'A':1.0, 'B':0.6}
     DISSONANCE['ii']  = {'C':0.6, 'D':0.0, 'E':1.0, 'F':0.1, 'G':1.0, 'A':0.0, 'B':1.0}
     DISSONANCE['iii'] = {'C':1.0, 'D':1.0, 'E':0.0, 'F':1.0, 'G':0.1, 'A':1.0, 'B':0.0}
