@@ -7,17 +7,27 @@
 # an eighth note has a duration of 1 tick
 
 # NoteIK class:
+#   location:
+#       myNote.location
 #   init (multiple accepted formats):
 #       NoteIK(string="1,5---")
 #       NoteIK(exact_degree=34, duration=1)
 #       NoteIK(degree=4, octave=3, duration=8)
 #   transpose (in place transposition in degrees):
-#       transpose(-3)
+#       myNote.transpose(-3)
 #   get_music21_note (returns music21 format):
 #       myMusic21Note = myNote.get_music21_note()
+#   >, <, >=, <=, ==, != (overloaded comparison operators)
 # Rest class:
+#   location:
+#       myRest.location
 #   init (duration in ticks):
 #       Rest(4)
+# Extension class:
+#   location:
+#       myExtension.location
+#   init (object that this is an extension of):
+#       Extension(myNote)
 # Other:
 #  degree_separation (returns value in degrees, takes two Note objects as input, positive means second note is higher):
 #       num = note.degree_separation(myNote, myOtherNote)
@@ -25,6 +35,7 @@
 import music21
 
 class NoteIK:
+    location = None
     def __init__(self, *args, **kwargs):
         if len(args) != 0:
             raise NameError("Invalid use of NoteIK()")
@@ -32,14 +43,14 @@ class NoteIK:
             self.degree = int(kwargs['string'][0])
             self.octave = int(kwargs['string'][2])
             self.duration = len(kwargs['string']) - 2
-        elif kwargs.has_key('exact_degree') and kwargs.has_key('duration'):
+        elif kwargs.has_key('exact_degree'):
             self.degree = (kwargs['exact_degree'] - 1) % 7 + 1
             self.octave = (kwargs['exact_degree'] - 1) / 7 + 1
-            self.duration = kwargs['duration']
-        elif kwargs.has_key('degree') and kwargs.has_key('octave') and kwargs.has_key('duration'):
+            self.duration = kwargs.get('duration', 1)
+        elif kwargs.has_key('degree') and kwargs.has_key('octave'):
             self.degree = kwargs['degree']
             self.octave = kwargs['octave']
-            self.duration = kwargs['duration']
+            self.duration = kwargs.get('duration', 1)
         else:
             raise NameError("Invalid use of NoteIK()")
         self.on_change()
@@ -61,10 +72,29 @@ class NoteIK:
         self.on_change()
     def get_music21_note(self):
         return music21.note.Note(name_from_degree(self.degree) + str(self.octave))
+    # OVERLOADED OPERATORS
+    def __lt__(self, other):
+        return self.exact_degree < other.exact_degree
+    def ___le__(self, other):
+        return self.exact_degree <= other.exact_degree
+    def __eq__(self, other):
+        return self.exact_degree == other.exact_degree
+    def __ne__(self, other):
+        return self.exact_degree != other.exact_degree
+    def __gt__(self, other):
+        return self.exact_degree > other.exact_degree
+    def __ge__(self, other):
+        return self.exact_degree >= other.exact_degree
 
 class Rest:
+    location = None
     def __init__(self, duration):
         self.duration = duration
+
+class Extension:
+    location = None
+    def __init__(self, src):
+        self.src = src
 
 def name_from_degree(degree):
     if degree < 1 or degree > 7:

@@ -2,9 +2,10 @@
 # Calvin Pelletier
 # 1/1/16
 
-from music21 import *
+import music21
 from random import randint, random
 import progression
+import note
 
 # melody in string format: x 1,1 - 1,2 - - x x | 3,1
 # | is a measure divider, x is a rest, - is a continuation of the previous note, 1,2 is the 1 note (relative to key) in the 2nd octave
@@ -14,28 +15,26 @@ import progression
 
 class Melody:
     # MELODY
-    m = stream.Part()
+    ticks = []
+    notes = []
+    notes_and_rests = []
 
     # HELPER INFORMATION
-    progression = []
-    minor = False
-    rhythmic_style = 0 # see rhythmic()
+    progression = None
+    minor = None
+    rhythmic_style = None # see rhythmic()
 
     # CHARACTERISTICS
     energy = 0.0 # average of intervals divided by durations
     rhythmic = 0.0
     progression_dissonance = 0.0
     key_dissonance = 0.0
-    thematic = 0.0 # amount of repetition
 
     # INITIALIZATION FUNCTIONS
-    def __init__(self, m):
-        if isinstance(m, stream.Part):
-            self.m = m
-        elif isinstance(m, basestring):
-            self.m = melody_from_string(m)
-        else:
-            raise NameError("Undefined melody format.")
+    def __init__(self, progression=progression.Progression(['I', 'V', 'vi', 'IV']), minor=False, rhythmic_style=0):
+        self.progression = progression
+        self.minor = minor
+        self.rhythmic_style = rhythmic_style
 
     # CHARACTERISTIC FUNCTIONS
     def calculate_all_characteristics(self):
@@ -46,41 +45,37 @@ class Melody:
 
     def energy(self):
         total = 0.0
-        notes = self.m.flat.getElementsByClass(note.Note)
-        for i in range(len(notes) - 1):
-            total += abs(interval.notesToChromatic(notes[i], notes[i + 1]).semitones) / float(notes[i].quarterLength)
+        for i in range(len(self.notes) - 1):
+            total += abs(note.degree_separation(notes[i], notes[i+1])) / float(notes[i+1].location - notes[i].location)
         self.energy = total / float(len(notes))
 
     def progression_dissonance(self):
-        if len(self.progression) == 0:
-            raise NameError("Tried to calculate progression dissonance without first specifying a progression.")
-
-        CHORD_DURATION_DOUBLED = 8
-        progression_duration_doubled = CHORD_DURATION_DOUBLED * len(self.progression)
-
         total = 0.0
-        for n in self.m.flat.getElementsByClass(note.Note):
-            for i in range(int(n.offset * 2), int((n.offset + n.quarterLength) * 2)):
-                chord = self.progression[(i % progression_duration_doubled) / CHORD_DURATION_DOUBLED]
-                total += progression.dissonance(chord.romanNumeral, n.name)
-        self.progression_dissonance = total / float(len(self.m.flat.getElementsByClass(note.Note)))
+        for i in self.instants:
+            if isinstance(self.instants[i], note.Note):
+                total += self.progression.chord_at(i).dissonance_of_note(self.instants[i].degree) * self.instants[i].duration
+            elif isinstance(self.instants[i], note.Extension):
+                if isinstance(self.instants[i].src, note.Note):
+                    total += self.progression.chord_at(i).dissonance_of_note(self.instants[i].src.degree) * self.instants[i].src.duration
+        self.progression_dissonance = total / float(len(self.notes))
 
     def key_dissonance(self):
         # favors 1 and 5 primarily, then the pentatonic scale
         #                    1    2    3    4    5    6    7
-        DISSONANCE_MAJOR = {'C':0.0, 'D':0.4, 'E':0.4, 'F':0.7, 'G':0.2, 'A':0.4, 'B':1.0}
-        DISSONANCE_MINOR = {'C':0.4, 'D':0.4, 'E':0.2, 'F':0.7, 'G':0.4, 'A':0.0, 'B':1.0}
+        DISSONANCE_MAJOR = [0.0, 0.4, 0.4, 0.7, 0.2, 0.4, 1.0]
+        DISSONANCE_MINOR = [0.4, 0.4, 0.2, 0.7, 0.4, 0.0, 1.0]
 
         total = 0.0
-        i = 0
-        for n in self.m.flat.getElementsByClass(note.Note):
+        for n in self.notes:
             if self.minor:
-                total += DISSONANCE_MINOR[n.name] * n.quarterLength
+                total += DISSONANCE_MINOR[n.degree - 1] * n.duration
             else:
-                total += DISSONANCE_MAJOR[n.name] * n.quarterLength
-        self.key_dissonance = total / float(len(self.m.flat.getElementsByClass(note.Note)))
+                total += DISSONANCE_MAJOR[n.degree - 1] * n.duration
+        self.key_dissonance = total / float(len(self.notes))
 
-    #def thematic(arr_melody):
+    #def rhythmically_thematic():
+
+    #def tonally_thematic():
 
     def rhythmic(self):
         #                       1   and   2   and   3   and   4   and
@@ -91,106 +86,43 @@ class Melody:
         RHYTHMIC_STYLE.append([0.0, 0.5, 0.0, 1.0, 0.0, 5.0, 0.0, 0.7]) # style 3
 
         total = 0.0
-        for n in self.m.flat.getElementsByClass(note.Note):
-            total += RHYTHMIC_STYLE[self.rhythmic_style][int(n.offset * 2) % 8] * n.quarterLength
-        self.rhythmic = total / float(len(self.m.flat.getElementsByClass(note.Note)))
+        for n in self.notes:
+            total += RHYTHMIC_STYLE[self.rhythmic_style][n.location % 8] * n.duration
+        self.rhythmic = total / float(len(self.notes))
 
-    #def rhythmic_variation(melody):
+    #def rhythmic_variation():
 
-    #def tonal_variation(melody):
+    #def tonal_variation():
 
-    #HELPER FUNCTIONS
-    def printable_progression(self):
-        ret = []
-        for chord in self.progression:
-            ret.append(chord.romanNumeral)
-        return '-'.join(ret)
+    # OTHER FUNCTIONS
+    def duration(self):
+        return len(self.instants)
 
-    def show(self, param='default'):
-        if param == 'default':
-            self.m.show()
-        else:
-            self.m.show(param)
+    def append(self, note_rest):
+        note_rest.location = len(self.instants)
+        self.instants.append(note_rest)
+        self.notes_and_rests.append(note_rest)
+        if isinstance(note_rest, note.Note):
+            self.notes.append(note_rest)
+        for range(note_rest.duration - 1):
+            extension = Extension(note_rest)
+            extension.location = len(self.instants)
+            self.instants.append(extension)
 
-def melody_from_string(string):
-    ret = stream.Part()
-    src = string.split(' ')
-    i = 0
-    while i < len(src):
-        if src[i] == 'x':
-            cur = note.Rest()
-        elif src[i] == '-':
-            i += 1
-            continue
-        elif src[i] == '|':
-            i += 1
-            continue
-        elif len(src[i]) == 3:
-            cur = note.Note(note_from_string(src[i]))
-        else:
-            raise NameError("error parsing melody from string")
-        cur.quarterLength = 0.5
-        i += 1
-        while i < len(src):
-            if src[i] == '|':
-                if isinstance(cur, note.Rest):
-                    break
-            elif src[i] == '-':
-                cur.quarterLength += 0.5
-            elif src[i] == 'x' and isinstance(cur, note.Rest):
-                cur.quarterLength += 0.5
-            else:
-                break
-            i += 1
-        ret.append(cur)
-    return ret
-
-def note_from_string(string):
-    if string[0] == '1':
-        ret = 'C'
-    elif string[0] == '2':
-        ret = 'D'
-    elif string[0] == '3':
-        ret = 'E'
-    elif string[0] == '4':
-        ret = 'F'
-    elif string[0] == '5':
-        ret = 'G'
-    elif string[0] == '6':
-        ret = 'A'
-    elif string[0] == '7':
-        ret = 'B'
-    else:
-        raise NameError("error parsing note from string")
-    return ret + string[2]
-
-#def music21_from_exact_note(note):
-#    note_dict = {1:'C', 2:'D', 3:'E', 4:'F', 5:'G', 6:'A', 7:'B'}
-#    return note.Note(note_dict[(note - 1) % 7 + 1] + str((note - 1) / 7 + 1))
-
-#def note_octave_to_exact_note(note, octave):
-#    return note + 7 * (octave - 1)
-
-# returns in str format: 1,4
-#def exact_note_to_note_octave(note):
-#    octave = (note - 1) / 7 + 1
-#    note_in_octave = (note - 1) % 7 + 1
-#    return str(note_in_octave) + ',' + str(octave)
 
 def create_random_melody():
     MAX_RANGE = 20 # in semitones
-    UPPER_NOTE_BOUND = note.Note('G5')
-    LOWER_NOTE_BOUND = note.Note('G3')
+    UPPER_NOTE_BOUND = note.Note('5,5')
+    LOWER_NOTE_BOUND = note.Note('5,3')
     UPPER_LEN_BOUND = 16 # in measures
     LOWER_LEN_BOUND = 4
-    POSSIBLE_START_NOTES = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5']
+    POSSIBLE_START_NOTES = ['1,4', '2,4', '3,4', '4,4', '5,4', '6,4', '7,4', '1,5']
     CHANCE_OF_REST = 0.1
     CHANCE_OF_EXTENSION = 0.4
     MINOR_CHANCE = 0.5
 
-    m = stream.Part()
-    m.insert(instrument.Flute())
-    length = 4.0 * randint(LOWER_LEN_BOUND, UPPER_LEN_BOUND)
+    ret = Melody()
+    length = 8 * randint(LOWER_LEN_BOUND, UPPER_LEN_BOUND)
     s = scale.MajorScale('C')
     start_note = note.Note(POSSIBLE_START_NOTES[randint(0, len(POSSIBLE_START_NOTES) - 1)])
     m.append(start_note)
@@ -236,10 +168,6 @@ def create_random_melody():
     ret = Melody(m)
     ret.minor = randint(0, 100) / 100.0 < MINOR_CHANCE
     return ret
-
-def print_melody(melody):
-    print("~~~%s (%s)~~~:\n %s\nenergy: %f\nprogression_dissonance: %f\nkey_dissonance: %f\nrhythmic: %f\n" \
-       % (melody.m.id, melody.printable_progression(), "TODO", melody.energy, melody.progression_dissonance, melody.key_dissonance, melody.rhythmic))
 
 def run_test_data():
     melody_data = open('melody_data.txt', 'r')
