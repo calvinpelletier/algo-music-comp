@@ -17,7 +17,6 @@ class Melody:
     # MELODY
     ticks = []
     notes = []
-    notes_and_rests = []
 
     # HELPER INFORMATION
     progression = None
@@ -101,7 +100,6 @@ class Melody:
     def append(self, note_rest):
         note_rest.location = len(self.instants)
         self.instants.append(note_rest)
-        self.notes_and_rests.append(note_rest)
         if isinstance(note_rest, note.Note):
             self.notes.append(note_rest)
         for range(note_rest.duration - 1):
@@ -109,64 +107,70 @@ class Melody:
             extension.location = len(self.instants)
             self.instants.append(extension)
 
+    # extends last note or rest by one tick
+    #def extend_last(self):
+    #    i = len(self.instants) - 1
+    #    while isinstance(instants[i], note.Extension):
+    #        i -= 1
+    #    instants[i].duration += 1
+    #    if isinstance(self.instants[i], note.Note):
+    #        self.notes[-1].duration = instants[i].duration
+
+
 
 def create_random_melody():
-    MAX_RANGE = 20 # in semitones
+    MAX_RANGE = 13 # in degrees
     UPPER_NOTE_BOUND = note.Note('5,5')
     LOWER_NOTE_BOUND = note.Note('5,3')
     UPPER_LEN_BOUND = 16 # in measures
     LOWER_LEN_BOUND = 4
     POSSIBLE_START_NOTES = ['1,4', '2,4', '3,4', '4,4', '5,4', '6,4', '7,4', '1,5']
     CHANCE_OF_REST = 0.1
-    CHANCE_OF_EXTENSION = 0.4
+    CHANCE_OF_EXTENSION = 0.5
     MINOR_CHANCE = 0.5
+    #                      -7    -6    -5    -4    -3    -2     -1    0    +1    +2    +3    +4    +5    +6    +7
+    CHANCE_OF_MOVEMENT = [0.05, 0.05, 0.05, 0.05, 0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.05, 0.05, 0.05, 0.05, 0.05]
 
     ret = Melody()
+    if random() < MINOR_CHANCE:
+        ret.minor = True
     length = 8 * randint(LOWER_LEN_BOUND, UPPER_LEN_BOUND)
-    s = scale.MajorScale('C')
-    start_note = note.Note(POSSIBLE_START_NOTES[randint(0, len(POSSIBLE_START_NOTES) - 1)])
-    m.append(start_note)
+
+    start_note = note.Note(string=POSSIBLE_START_NOTES[randint(0, len(POSSIBLE_START_NOTES) - 1)])
+    while random() < CHANCE_OF_EXTENSION:
+        start_note.duration += 1
+    ret.append(start_note)
     lowest_note = start_note
     highest_note = start_note
-    while(m.quarterLength < length):
+    while True:
         rand = random()
         if rand < CHANCE_OF_REST:
-            if isinstance(m[-1], note.Rest):
-                m[-1].quarterLength += 0.5
-            else:
-                temp = note.Rest()
-                temp.quarterLength = 0.5
-                m.append(temp)
-        elif rand < CHANCE_OF_REST + CHANCE_OF_EXTENSION:
-            m[-1].quarterLength += 0.5
+            cur = note.Rest()
         else:
-            notes = m.getElementsByClass(note.Note)
-            rand = random()
-            if rand < 0.5:
-                direction = 'ascending'
-            else:
-                direction = 'descending'
-            temp = s.next(notes[-1], direction, randint(1,7))
-            while   temp < LOWER_NOTE_BOUND.pitch or\
-                    temp > UPPER_NOTE_BOUND.pitch or\
-                    temp < highest_note.transpose(MAX_RANGE * -1) or\
-                    temp > lowest_note.transpose(MAX_RANGE):
+            while True:
+                cur = note.Note(exact_degree=ret.notes[-1].exact_degree)
                 rand = random()
-                if rand < 0.5:
-                    direction = 'ascending'
-                else:
-                    direction = 'descending'
-                temp = s.next(notes[-1], direction, randint(1,7))
-            temp = note.Note(temp)
-            if temp.pitch < lowest_note.pitch:
-                lowest_note = temp
-            if temp.pitch > highest_note.pitch:
-                highest_note = temp
-            temp.quarterLength = 0.5
-            m.append(temp)
+                i = 0
+                while rand > CHANCE_OF_MOVEMENT[i]:
+                    rand -= CHANCE_OF_MOVEMENT[i]
+                    i += 1
+                cur.transpose(i - 7)
+                upper_bound = min(UPPER_NOTE_BOUND, lowest_note.transpose(MAX_RANGE, in_place=False))
+                lower_bound = max(LOWER_NOTE_BOUND, highest_note.transpose(MAX_RANGE * -1, in_place=False))
+                if cur < upper_bound and cur > lower_bound:
+                    break
+            if cur < lowest_note:
+                lowest_note = cur
+            if cur > highest_note:
+                highest_note = cur
+        while random() < CHANCE_OF_EXTENSION:
+            cur.duration += 1
+        if ret.duration + cur.duration > length:
+            cur.duration = length - ret.duration
+            ret.append(cur)
+            break
+        ret.append(cur)
 
-    ret = Melody(m)
-    ret.minor = randint(0, 100) / 100.0 < MINOR_CHANCE
     return ret
 
 def run_test_data():

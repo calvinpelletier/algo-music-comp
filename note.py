@@ -61,15 +61,20 @@ class NoteIK:
         self.name = name_from_degree(degree)
         self.name_with_octave = self.name + str(self.octave)
     # in scale degrees
-    def transpose(self, degrees):
-        self.degree += degrees
-        while self.degree < 1:
-            self.degree += 7
-            self.octave -= 1
-        while self.degree > 7
-            self.degree -= 7
-            self.octave += 1
-        self.on_change()
+    def transpose(self, degrees, in_place=True):
+        if in_place:
+            self.degree += degrees
+            while self.degree < 1:
+                self.degree += 7
+                self.octave -= 1
+            while self.degree > 7:
+                self.degree -= 7
+                self.octave += 1
+            self.on_change()
+        else:
+            ret = note.Note(degree=self.degree, octave=self.octave)
+            ret.transpose(degrees)
+            return ret
     def get_music21_note(self):
         return music21.note.Note(name_from_degree(self.degree) + str(self.octave))
     # OVERLOADED OPERATORS
@@ -88,7 +93,7 @@ class NoteIK:
 
 class Rest:
     location = None
-    def __init__(self, duration):
+    def __init__(self, duration=1):
         self.duration = duration
 
 class Extension:
