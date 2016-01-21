@@ -4,9 +4,20 @@
 
 import csv
 from random import randint
-from music21 import *
+import music21
+import chord
 
 GLOBAL_ROOT = None
+
+class Progression:
+    p = []
+    def __init__(self, numerals):
+        for numeral in numerals:
+            self.p.append(chord.Chord(numeral))
+    def chord_at(tick):
+        CHORD_DURATION = 8
+        progression_duration = CHORD_DURATION * len(self.progression)
+        return self.p[(tick % progression_duration) / CHORD_DURATION]
 
 class TreeNode:
     def __init__(self, data):
