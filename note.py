@@ -56,6 +56,8 @@ class Note:
         self.on_change()
     # called anytime this note's value changed
     def on_change(self):
+        if self.degree < 1 or self.degree > 7 or self.octave < 1 or self.octave > 7:
+            raise NameError("Invalid degree or octave: %d,%d" % (self.degree, self.octave))
         self.exact_degree = self.degree + 7 * (self.octave - 1)
         self.degree_octave_str = str(self.degree) + ',' + str(self.octave)
         self.name = name_from_degree(self.degree)

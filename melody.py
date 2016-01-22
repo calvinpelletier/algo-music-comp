@@ -54,7 +54,7 @@ class Melody:
     def get_energy(self):
         total = 0.0
         for i in range(len(self.notes) - 1):
-            total += abs(note.degree_separation(self.notes[i], self.notes[i+1])) / float(self.notes[i+1].location - self.notes[i].location)
+            total += abs(note.degree_separation(self.notes[i], self.notes[i+1])) / float(self.notes[i].duration)
         self.energy = self.E_A * total / float(len(self.notes)) + self.E_B
 
     def get_progression_dissonance(self):
@@ -120,6 +120,8 @@ class Melody:
     def parse(self, string):
         s = string.translate(None, '|')
         s = s.translate(None, ' ')
+        if s[0] == '-':
+            s = 'x' + s[1:]
         self.instants = []
         self.notes = []
         self.notes_and_rests = []
@@ -145,7 +147,10 @@ class Melody:
                     if s[i] != '-':
                         break
                     i += 1
-                self.append(note.Note(string=s[old_i:i]))
+                try:
+                    self.append(note.Note(string=s[old_i:i]))
+                except:
+                    raise NameError("Tried to create a note from: \'%s\' in string: \'%s\'." % (s[old_i:i], s))
 
     def __str__(self):
         ret = ''
@@ -159,23 +164,27 @@ class Melody:
 
     def get_music21(self):
         ret = music21.stream.Part()
+        ret.insert(music21.instrument.Flute())
         for note_rest in self.notes_and_rests:
             ret.append(note_rest.get_music21())
+        ret.transpose(5, inPlace=True)
         return ret
 
     def print_characteristics(self):
         print("%s\n%s\nenergy: %f\nprogression dissonance: %f\nkey dissonance: %f\nrhythmic: %f\n"\
             % (self.ID, str(self), self.energy, self.progression_dissonance, self.key_dissonance, self.rhythmic))
 
-    def distance_from_target(energy, progression_dissonance, key_dissonance, rhythmic):
-        return (self.energy - energy)**2 + (self.progression_dissonance - progression_dissonance)**2 + \
-            (self.key_dissonance - key_dissonance)**2 + (self.rhythmic - rhythmic)**2
+    def distance_to_target(self, target):
+        return (self.energy - target.energy)**2 + (self.progression_dissonance - target.progression_dissonance)**2 + \
+            (self.key_dissonance - target.key_dissonance)**2 + (self.rhythmic - target.rhythmic)**2
 
     def mutate(self, in_place=False):
-        CHANCE_OF_ALTERING = 0.2
-        CHANCE_OF_REST = 0.1
-        CHANCE_OF_EXTENSION = 0.4
-        CHANCE_OF_NOTE = 0.5
+        UPPER_NOTE_BOUND = note.Note(string='5,5')
+        LOWER_NOTE_BOUND = note.Note(string='5,3')
+        CHANCE_OF_ALTERING = 0.1
+        CHANCE_OF_REST = 0.05
+        CHANCE_OF_EXTENSION = 0.35
+        CHANCE_OF_NOTE = 0.6
         #                      -7    -6    -5    -4    -3    -2     -1    0    +1    +2    +3    +4    +5    +6    +7
         CHANCE_OF_MOVEMENT = [0.00, 0.00, 0.05, 0.05, 0.10, 0.10, 0.15, 0.10, 0.15, 0.10, 0.10, 0.05, 0.05, 0.00, 0.00]
 
@@ -197,12 +206,16 @@ class Melody:
                         if last_note is None:
                             last_note = note.Note(string='1,4')
                         instant = note.Note(degree=last_note.degree, octave=last_note.octave)
-                    rand = random()
-                    i = 0
-                    while rand > CHANCE_OF_MOVEMENT[i]:
-                        rand -= CHANCE_OF_MOVEMENT[i]
-                        i += 1
-                    instant.transpose(i - 7)
+                    while True:
+                        rand = random()
+                        i = 0
+                        while rand > CHANCE_OF_MOVEMENT[i]:
+                            rand -= CHANCE_OF_MOVEMENT[i]
+                            i += 1
+                        new_instant = instant.transpose(i - 7, in_place=False)
+                        if new_instant > LOWER_NOTE_BOUND and new_instant < UPPER_NOTE_BOUND:
+                            break
+                    instant = new_instant
             if isinstance(instant, note.Note):
                 string += str(instant.degree) + ',' + str(instant.octave)
             elif isinstance(instant, note.Rest):
@@ -219,14 +232,30 @@ class Melody:
             ret.parse(string)
             return ret
 
-
+def genetic_algorithm(target, ancestor, generations, num_offspring):
+    if ancestor is None:
+        parent = create_random_melody()
+        parent.calculate_characteristics()
+    else:
+        parent = ancestor
+    for i in range(generations):
+        best = parent
+        children = []
+        for j in range(num_offspring):
+            children.append(parent.mutate())
+            children[-1].calculate_characteristics()
+            if best.distance_to_target(target) > children[-1].distance_to_target(target):
+                best = children[-1]
+        parent = best
+        children = []
+    return parent
 
 def create_random_melody():
     MAX_RANGE = 13 # in degrees
     UPPER_NOTE_BOUND = note.Note(string='5,5')
     LOWER_NOTE_BOUND = note.Note(string='5,3')
     UPPER_LEN_BOUND = 16 # in measures
-    LOWER_LEN_BOUND = 4
+    LOWER_LEN_BOUND = 8
     POSSIBLE_START_NOTES = ['1,4', '2,4', '3,4', '4,4', '5,4', '6,4', '7,4', '1,5']
     CHANCE_OF_REST = 0.1
     CHANCE_OF_EXTENSION = 0.5
