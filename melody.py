@@ -14,6 +14,16 @@ import note
 # IF IT'S IN A MINOR, 1 STILL REPRESENTS C, BUT ITS CHARACTERISTICS ACCOUNT FOR THE DIFFERENCES BETWEEN C MAJOR AND A MINOR
 
 class Melody:
+    # CONSTANTS
+    E_A = 9.7
+    E_B = 4.0
+    PD_A = 2.3
+    PD_B = 12.7
+    KD_A = 16.5
+    KD_B = 5.4
+    R_A = 16.2
+    R_B = 8.8
+
     # INITIALIZATION FUNCTIONS
     def __init__(self, chord_progression=progression.Progression(['I', 'V', 'vi', 'IV']), minor=False, rhythmic_style=0):
         self.ID = "unidentified"
@@ -45,7 +55,7 @@ class Melody:
         total = 0.0
         for i in range(len(self.notes) - 1):
             total += abs(note.degree_separation(self.notes[i], self.notes[i+1])) / float(self.notes[i+1].location - self.notes[i].location)
-        self.energy = total / float(len(self.notes))
+        self.energy = self.E_A * total / float(len(self.notes)) + self.E_B
 
     def get_progression_dissonance(self):
         total = 0.0
@@ -55,7 +65,7 @@ class Melody:
             elif isinstance(self.instants[i], note.Extension):
                 if isinstance(self.instants[i].src, note.Note):
                     total += self.chord_progression.chord_at(i).dissonance_of_note(self.instants[i].src) * self.instants[i].src.duration
-        self.progression_dissonance = total / float(len(self.notes))
+        self.progression_dissonance = self.PD_A * total / float(len(self.notes)) + self.PD_B
 
     def get_key_dissonance(self):
         # favors 1 and 5 primarily, then the pentatonic scale
@@ -69,7 +79,7 @@ class Melody:
                 total += DISSONANCE_MINOR[n.degree - 1] * n.duration
             else:
                 total += DISSONANCE_MAJOR[n.degree - 1] * n.duration
-        self.key_dissonance = total / float(len(self.notes))
+        self.key_dissonance = self.KD_A * total / float(len(self.notes)) + self.KD_B
 
     #def rhythmically_thematic():
 
@@ -86,7 +96,7 @@ class Melody:
         total = 0.0
         for n in self.notes:
             total += RHYTHMIC_STYLE[self.rhythmic_style][n.location % 8] * n.duration
-        self.rhythmic = total / float(len(self.notes))
+        self.rhythmic = self.R_A * total / float(len(self.notes)) + self.R_B
 
     #def rhythmic_variation():
 
@@ -156,6 +166,60 @@ class Melody:
     def print_characteristics(self):
         print("%s\n%s\nenergy: %f\nprogression dissonance: %f\nkey dissonance: %f\nrhythmic: %f\n"\
             % (self.ID, str(self), self.energy, self.progression_dissonance, self.key_dissonance, self.rhythmic))
+
+    def distance_from_target(energy, progression_dissonance, key_dissonance, rhythmic):
+        return (self.energy - energy)**2 + (self.progression_dissonance - progression_dissonance)**2 + \
+            (self.key_dissonance - key_dissonance)**2 + (self.rhythmic - rhythmic)**2
+
+    def mutate(self, in_place=False):
+        CHANCE_OF_ALTERING = 0.2
+        CHANCE_OF_REST = 0.1
+        CHANCE_OF_EXTENSION = 0.4
+        CHANCE_OF_NOTE = 0.5
+        #                      -7    -6    -5    -4    -3    -2     -1    0    +1    +2    +3    +4    +5    +6    +7
+        CHANCE_OF_MOVEMENT = [0.00, 0.00, 0.05, 0.05, 0.10, 0.10, 0.15, 0.10, 0.15, 0.10, 0.10, 0.05, 0.05, 0.00, 0.00]
+
+        seed()
+        new_instants = self.instants
+        last_note = None
+        string = ''
+        for instant in new_instants:
+            if isinstance(instant, note.Note):
+                last_note = note.Note(degree=instant.degree, octave=instant.octave)
+            if random() < CHANCE_OF_ALTERING:
+                rand = random()
+                if rand < CHANCE_OF_REST:
+                    instant = note.Rest()
+                elif rand < CHANCE_OF_REST + CHANCE_OF_EXTENSION:
+                    instant = note.Extension(None)
+                else:
+                    if isinstance(instant, note.Rest) or isinstance(instant, note.Extension):
+                        if last_note is None:
+                            last_note = note.Note(string='1,4')
+                        instant = note.Note(degree=last_note.degree, octave=last_note.octave)
+                    rand = random()
+                    i = 0
+                    while rand > CHANCE_OF_MOVEMENT[i]:
+                        rand -= CHANCE_OF_MOVEMENT[i]
+                        i += 1
+                    instant.transpose(i - 7)
+            if isinstance(instant, note.Note):
+                string += str(instant.degree) + ',' + str(instant.octave)
+            elif isinstance(instant, note.Rest):
+                string += 'x'
+            elif isinstance(instant, note.Extension):
+                string += '-'
+            else:
+                raise NameError("Something went horribly wrong.")
+        if in_place:
+            self.parse(string)
+        else:
+            ret = Melody(chord_progression=self.chord_progression, minor=self.minor, rhythmic_style=self.minor)
+            ret.ID = self.ID
+            ret.parse(string)
+            return ret
+
+
 
 def create_random_melody():
     MAX_RANGE = 13 # in degrees
