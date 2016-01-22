@@ -10,9 +10,9 @@
 #   location:
 #       myNote.location
 #   init (multiple accepted formats):
-#       NoteIK(string="1,5---")
-#       NoteIK(exact_degree=34, duration=1)
-#       NoteIK(degree=4, octave=3, duration=8)
+#       Note(string="1,5---")
+#       Note(exact_degree=34, duration=1)
+#       Note(degree=4, octave=3, duration=8)
 #   transpose (in place transposition in degrees):
 #       myNote.transpose(-3)
 #   get_music21_note (returns music21 format):
@@ -34,11 +34,10 @@
 
 import music21
 
-class NoteIK:
-    location = None
+class Note:
     def __init__(self, *args, **kwargs):
         if len(args) != 0:
-            raise NameError("Invalid use of NoteIK()")
+            raise NameError("Invalid use of NoteIK")
         if kwargs.has_key('string'):
             self.degree = int(kwargs['string'][0])
             self.octave = int(kwargs['string'][2])
@@ -52,13 +51,14 @@ class NoteIK:
             self.octave = kwargs['octave']
             self.duration = kwargs.get('duration', 1)
         else:
-            raise NameError("Invalid use of NoteIK()")
+            raise NameError("Invalid use of Note()")
+        self.location = None
         self.on_change()
     # called anytime this note's value changed
     def on_change(self):
         self.exact_degree = self.degree + 7 * (self.octave - 1)
         self.degree_octave_str = str(self.degree) + ',' + str(self.octave)
-        self.name = name_from_degree(degree)
+        self.name = name_from_degree(self.degree)
         self.name_with_octave = self.name + str(self.octave)
     # in scale degrees
     def transpose(self, degrees, in_place=True):
@@ -72,11 +72,13 @@ class NoteIK:
                 self.octave += 1
             self.on_change()
         else:
-            ret = note.Note(degree=self.degree, octave=self.octave)
+            ret = Note(degree=self.degree, octave=self.octave)
             ret.transpose(degrees)
             return ret
-    def get_music21_note(self):
-        return music21.note.Note(name_from_degree(self.degree) + str(self.octave))
+    def get_music21(self):
+        ret = music21.note.Note(name_from_degree(self.degree) + str(self.octave))
+        ret.quarterLength = 0.5 * self.duration
+        return ret
     # OVERLOADED OPERATORS
     def __lt__(self, other):
         return self.exact_degree < other.exact_degree
@@ -92,14 +94,18 @@ class NoteIK:
         return self.exact_degree >= other.exact_degree
 
 class Rest:
-    location = None
     def __init__(self, duration=1):
         self.duration = duration
+        self.location = None
+    def get_music21(self):
+        ret = music21.note.Rest()
+        ret.quarterLength = 0.5 * self.duration
+        return ret
 
 class Extension:
-    location = None
     def __init__(self, src):
         self.src = src
+        self.location = None
 
 def name_from_degree(degree):
     if degree < 1 or degree > 7:

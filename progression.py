@@ -10,13 +10,13 @@ import chord
 GLOBAL_ROOT = None
 
 class Progression:
-    p = []
     def __init__(self, numerals):
+        self.p = []
         for numeral in numerals:
             self.p.append(chord.Chord(numeral))
-    def chord_at(tick):
+    def chord_at(self, tick):
         CHORD_DURATION = 8
-        progression_duration = CHORD_DURATION * len(self.progression)
+        progression_duration = CHORD_DURATION * len(self.p)
         return self.p[(tick % progression_duration) / CHORD_DURATION]
 
 class TreeNode:

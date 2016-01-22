@@ -5,7 +5,7 @@
 import note
 import music21
 
-class ChordIK:
+class Chord:
     def __init__(self, numeral):
         self.numeral = numeral
     def dissonance_of_note(self, n):
@@ -18,6 +18,6 @@ class ChordIK:
         DISSONANCE['V']   = [1.0, 0.0, 1.0, 0.4, 0.0, 1.0, 0.1]
         DISSONANCE['vi']  = [0.1, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0]
         return DISSONANCE[self.numeral][n.degree - 1]
-    def get_music21_chord(self):
+    def get_music21(self):
         k = music21.key.Key('C')
         return music21.roman.RomanNumeral(self.numeral, k)
