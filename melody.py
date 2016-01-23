@@ -15,14 +15,16 @@ import note
 
 class Melody:
     # CONSTANTS
-    E_A = 9.7
-    E_B = 4.0
-    PD_A = 2.3
+    E_A = 8.0
+    E_B = 8.0
+    PD_A = 2.2
     PD_B = 12.7
     KD_A = 16.5
     KD_B = 5.4
-    R_A = 16.2
+    R_A = 16.4
     R_B = 8.8
+    RT_A = 38.0
+    RT_B = 14.1
 
     # INITIALIZATION FUNCTIONS
     def __init__(self, chord_progression=progression.Progression(['I', 'V', 'vi', 'IV']), minor=False, rhythmic_style=0):
@@ -40,9 +42,10 @@ class Melody:
 
         # CHARACTERISTICS
         self.energy = 0.0 # average of intervals divided by durations
-        self.rhythmic = 0.0
         self.progression_dissonance = 0.0
         self.key_dissonance = 0.0
+        self.rhythmic = 0.0
+        self.rhythmically_thematic = 0.0
 
     # CHARACTERISTIC FUNCTIONS
     def calculate_characteristics(self):
@@ -50,11 +53,12 @@ class Melody:
         self.get_progression_dissonance()
         self.get_key_dissonance()
         self.get_rhythmic()
+        self.get_rhythmically_thematic()
 
     def get_energy(self):
         total = 0.0
         for i in range(len(self.notes) - 1):
-            total += abs(note.degree_separation(self.notes[i], self.notes[i+1])) / float(self.notes[i].duration)
+            total += abs(note.degree_separation(self.notes[i], self.notes[i+1])) / float(self.notes[i].duration ** 2)
         self.energy = self.E_A * total / float(len(self.notes)) + self.E_B
 
     def get_progression_dissonance(self):
@@ -81,7 +85,32 @@ class Melody:
                 total += DISSONANCE_MAJOR[n.degree - 1] * n.duration
         self.key_dissonance = self.KD_A * total / float(len(self.notes)) + self.KD_B
 
-    #def rhythmically_thematic():
+    def get_rhythmically_thematic(self):
+        IDENTICAL_BONUS = 1.0
+        ONE_OFF_BONUS = 0.3
+        TWO_OFF_BONUS = 0.1
+        measures = []
+        total = 0.0
+        for i in range(len(self.instants)):
+            if i % 8 == 0:
+                measures.append([])
+            if isinstance(self.instants[i], note.Note):
+                measures[i / 8].append(1)
+            else:
+                measures[i / 8].append(0)
+        for i in range(len(measures) - 1):
+            for j in range(i + 1, len(measures)):
+                count = 0
+                for k in range(8):
+                    if measures[i][k] != measures[j][k]:
+                        count += 1
+                if count == 0:
+                    total += IDENTICAL_BONUS
+                elif count == 1:
+                    total += ONE_OFF_BONUS
+                elif count == 2:
+                    total += TWO_OFF_BONUS
+        self.rhythmically_thematic = self.RT_A * total / float(len(measures)) + self.RT_B
 
     #def tonally_thematic():
 
@@ -171,12 +200,13 @@ class Melody:
         return ret
 
     def print_characteristics(self):
-        print("%s\n%s\nenergy: %f\nprogression dissonance: %f\nkey dissonance: %f\nrhythmic: %f\n"\
-            % (self.ID, str(self), self.energy, self.progression_dissonance, self.key_dissonance, self.rhythmic))
+        print("%s\n%s\nenergy: %f\nprogression dissonance: %f\nkey dissonance: %f\nrhythmic: %f\nrhythmically thematic: %f\n"\
+            % (self.ID, str(self), self.energy, self.progression_dissonance, self.key_dissonance, self.rhythmic, self.rhythmically_thematic))
 
     def distance_to_target(self, target):
         return (self.energy - target.energy)**2 + (self.progression_dissonance - target.progression_dissonance)**2 + \
-            (self.key_dissonance - target.key_dissonance)**2 + (self.rhythmic - target.rhythmic)**2
+            (self.key_dissonance - target.key_dissonance)**2 + (self.rhythmic - target.rhythmic)**2 + \
+            (self.rhythmically_thematic - target.rhythmically_thematic)**2
 
     def mutate(self, in_place=False):
         UPPER_NOTE_BOUND = note.Note(string='5,5')
@@ -298,7 +328,7 @@ def create_random_melody():
                 highest_note = cur
         while random() < CHANCE_OF_EXTENSION:
             cur.duration += 1
-        if ret.duration() + cur.duration > length:
+        if ret.duration() + cur.duration >= length:
             cur.duration = length - ret.duration()
             ret.append(cur)
             break
