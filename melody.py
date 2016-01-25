@@ -15,7 +15,7 @@ import note
 
 class Melody:
     # CONSTANTS
-    E_A = 8.0
+    E_A = 9.5
     E_B = 8.0
     PD_A = 2.2
     PD_B = 12.7
@@ -23,8 +23,8 @@ class Melody:
     KD_B = 5.4
     R_A = 16.4
     R_B = 8.8
-    RT_A = 38.0
-    RT_B = 14.1
+    RT_A = 63.0
+    RT_B = 16.1
 
     # INITIALIZATION FUNCTIONS
     def __init__(self, chord_progression=progression.Progression(['I', 'V', 'vi', 'IV']), minor=False, rhythmic_style=0):
@@ -41,11 +41,11 @@ class Melody:
         self.rhythmic_style = rhythmic_style
 
         # CHARACTERISTICS
-        self.energy = 0.0 # average of intervals divided by durations
-        self.progression_dissonance = 0.0
-        self.key_dissonance = 0.0
-        self.rhythmic = 0.0
-        self.rhythmically_thematic = 0.0
+        self.energy = None # average of intervals divided by durations
+        self.progression_dissonance = None
+        self.key_dissonance = None
+        self.rhythmic = None
+        self.rhythmically_thematic = None
 
     # CHARACTERISTIC FUNCTIONS
     def calculate_characteristics(self):
@@ -54,6 +54,15 @@ class Melody:
         self.get_key_dissonance()
         self.get_rhythmic()
         self.get_rhythmically_thematic()
+
+    def get_characteristics(self):
+        ret = []
+        ret.append(self.energy)
+        ret.append(self.progression_dissonance)
+        ret.append(self.key_dissonance)
+        ret.append(self.rhythmic)
+        ret.append(self.rhythmically_thematic)
+        return ret
 
     def get_energy(self):
         total = 0.0
@@ -193,7 +202,7 @@ class Melody:
 
     def get_music21(self):
         ret = music21.stream.Part()
-        ret.insert(music21.instrument.Flute())
+        ret.insert(music21.instrument.Piano())
         for note_rest in self.notes_and_rests:
             ret.append(note_rest.get_music21())
         ret.transpose(5, inPlace=True)
@@ -201,12 +210,22 @@ class Melody:
 
     def print_characteristics(self):
         print("%s\n%s\nenergy: %f\nprogression dissonance: %f\nkey dissonance: %f\nrhythmic: %f\nrhythmically thematic: %f\n"\
-            % (self.ID, str(self), self.energy, self.progression_dissonance, self.key_dissonance, self.rhythmic, self.rhythmically_thematic))
+            % (self.ID, str(self), self.energy, self.progression_dissonance,\
+            self.key_dissonance, self.rhythmic, self.rhythmically_thematic))
 
     def distance_to_target(self, target):
-        return (self.energy - target.energy)**2 + (self.progression_dissonance - target.progression_dissonance)**2 + \
-            (self.key_dissonance - target.key_dissonance)**2 + (self.rhythmic - target.rhythmic)**2 + \
-            (self.rhythmically_thematic - target.rhythmically_thematic)**2
+        BUFFER = 1.0
+        total = 0.0
+        characteristics1 = self.get_characteristics()
+        characteristics2 = target.get_characteristics()
+        for i in range(len(characteristics1)):
+            if characteristics2[i] is None:
+                continue
+            diff = abs(characteristics1[i] - characteristics2[i])
+            if diff < BUFFER:
+                continue
+            total += (diff - BUFFER)**2
+        return total
 
     def mutate(self, in_place=False):
         UPPER_NOTE_BOUND = note.Note(string='5,5')
@@ -218,7 +237,7 @@ class Melody:
         #                      -7    -6    -5    -4    -3    -2     -1    0    +1    +2    +3    +4    +5    +6    +7
         CHANCE_OF_MOVEMENT = [0.00, 0.00, 0.05, 0.05, 0.10, 0.10, 0.15, 0.10, 0.15, 0.10, 0.10, 0.05, 0.05, 0.00, 0.00]
 
-        seed()
+        #seed()
         new_instants = self.instants
         last_note = None
         string = ''
@@ -280,12 +299,10 @@ def genetic_algorithm(target, ancestor, generations, num_offspring):
         children = []
     return parent
 
-def create_random_melody():
+def create_random_melody(measures=4, chord_progression=progression.Progression(['I', 'V', 'vi', 'IV'])):
     MAX_RANGE = 13 # in degrees
     UPPER_NOTE_BOUND = note.Note(string='5,5')
     LOWER_NOTE_BOUND = note.Note(string='5,3')
-    UPPER_LEN_BOUND = 16 # in measures
-    LOWER_LEN_BOUND = 8
     POSSIBLE_START_NOTES = ['1,4', '2,4', '3,4', '4,4', '5,4', '6,4', '7,4', '1,5']
     CHANCE_OF_REST = 0.1
     CHANCE_OF_EXTENSION = 0.5
@@ -293,11 +310,12 @@ def create_random_melody():
     #                      -7    -6    -5    -4    -3    -2     -1    0    +1    +2    +3    +4    +5    +6    +7
     CHANCE_OF_MOVEMENT = [0.05, 0.05, 0.05, 0.05, 0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.05, 0.05, 0.05, 0.05, 0.05]
 
-    seed()
+    #seed()
     ret = Melody()
     if random() < MINOR_CHANCE:
         ret.minor = True
-    length = 8 * randint(LOWER_LEN_BOUND, UPPER_LEN_BOUND)
+    length = 8 * measures
+    ret.chord_progression = chord_progression
 
     start_note = note.Note(string=POSSIBLE_START_NOTES[randint(0, len(POSSIBLE_START_NOTES) - 1)])
     while random() < CHANCE_OF_EXTENSION:

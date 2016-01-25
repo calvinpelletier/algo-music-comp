@@ -18,14 +18,25 @@ class Progression:
         return self.p.itervalues()
     def __getitem__(self, i):
         return self.p[i]
+    def __str__(self):
+        strings = []
+        for c in self.p:
+            strings.append(c.numeral)
+        return '-'.join(strings)
     def chord_at(self, tick):
         CHORD_DURATION = 8
         progression_duration = CHORD_DURATION * len(self.p)
         return self.p[(tick % progression_duration) / CHORD_DURATION]
-    def get_music21(self):
+    def get_music21(self, duration):
         ret = music21.stream.Part()
         ret.insert(music21.instrument.Piano())
-        #TODO
+        while ret.quarterLength * 2 < duration:
+            for c in self.p:
+                temp = c.get_music21()
+                temp.quarterLength = 4.0
+                ret.append(temp)
+        ret.insert(music21.dynamics.Dynamic('p'))
+        return ret
 
 class TreeNode:
     def __init__(self, data):

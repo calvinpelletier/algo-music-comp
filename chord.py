@@ -20,4 +20,22 @@ class Chord:
         return DISSONANCE[self.numeral][n.degree - 1]
     def get_music21(self):
         k = music21.key.Key('C')
-        return music21.roman.RomanNumeral(self.numeral, k)
+        ret = music21.roman.RomanNumeral(self.numeral, k)
+        if self.numeral == 'I':
+            ret.transpose(-7, inPlace=True)
+        elif self.numeral == 'ii':
+            ret.transpose(-19, inPlace=True)
+        elif self.numeral == 'iii':
+            ret.transpose(-19, inPlace=True)
+        elif self.numeral == 'III':
+            ret.transpose(-19, inPlace=True)
+        elif self.numeral == 'IV':
+            ret.transpose(-19, inPlace=True)
+            ret.inversion(2)
+        elif self.numeral == 'V':
+            ret.transpose(-19, inPlace=True)
+            ret.inversion(1)
+        elif self.numeral == 'vi':
+            ret.transpose(-19, inPlace=True)
+            ret.inversion(1)
+        return ret
