@@ -34,7 +34,7 @@ def save_melody(m, name):
         f.write("minor\n")
     else:
         f.write("major\n")
-    f.write(str(m.rhythmic_style) + '\n')
+    f.write(str(int(m.rhythmic_style)) + '\n')
     f.write(str(m) + '\n')
     f.write(str(m.chord_progression))
     f.close()

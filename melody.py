@@ -14,7 +14,7 @@ import note
 # IF IT'S IN A MINOR, 1 STILL REPRESENTS C, BUT ITS CHARACTERISTICS ACCOUNT FOR THE DIFFERENCES BETWEEN C MAJOR AND A MINOR
 
 class Melody:
-    # CONSTANTS
+    # CONSTANTS FOR NORMALIZING CHARACTERISTICS
     E_A = 9.5
     E_B = 8.0
     PD_A = 2.2
@@ -23,8 +23,10 @@ class Melody:
     KD_B = 5.4
     R_A = 16.4
     R_B = 8.8
-    RT_A = 63.0
+    RT_A = 90.0
     RT_B = 16.1
+    TT_A = 30.0
+    TT_B = 16.0
 
     # INITIALIZATION FUNCTIONS
     def __init__(self, chord_progression=progression.Progression(['I', 'V', 'vi', 'IV']), minor=False, rhythmic_style=0):
@@ -41,36 +43,30 @@ class Melody:
         self.rhythmic_style = rhythmic_style
 
         # CHARACTERISTICS
-        self.energy = None # average of intervals divided by durations
-        self.progression_dissonance = None
-        self.key_dissonance = None
-        self.rhythmic = None
-        self.rhythmically_thematic = None
+        self.characteristics = {}
+        self.characteristics['e'] = None
+        self.characteristics['pd'] = None
+        self.characteristics['kd'] = None
+        self.characteristics['r'] = None
+        self.characteristics['rt'] = None
+        self.characteristics['tt'] = None
 
     # CHARACTERISTIC FUNCTIONS
     def calculate_characteristics(self):
-        self.get_energy()
-        self.get_progression_dissonance()
-        self.get_key_dissonance()
+        self.get_energetic()
+        self.get_progression_dissonant()
+        self.get_key_dissonant()
         self.get_rhythmic()
         self.get_rhythmically_thematic()
+        self.get_tonally_thematic()
 
-    def get_characteristics(self):
-        ret = []
-        ret.append(self.energy)
-        ret.append(self.progression_dissonance)
-        ret.append(self.key_dissonance)
-        ret.append(self.rhythmic)
-        ret.append(self.rhythmically_thematic)
-        return ret
-
-    def get_energy(self):
+    def get_energetic(self):
         total = 0.0
         for i in range(len(self.notes) - 1):
             total += abs(note.degree_separation(self.notes[i], self.notes[i+1])) / float(self.notes[i].duration ** 2)
-        self.energy = self.E_A * total / float(len(self.notes)) + self.E_B
+        self.characteristics['e'] = self.E_A * total / float(len(self.notes)) + self.E_B
 
-    def get_progression_dissonance(self):
+    def get_progression_dissonant(self):
         total = 0.0
         for i in range(len(self.instants)):
             if isinstance(self.instants[i], note.Note):
@@ -78,9 +74,9 @@ class Melody:
             elif isinstance(self.instants[i], note.Extension):
                 if isinstance(self.instants[i].src, note.Note):
                     total += self.chord_progression.chord_at(i).dissonance_of_note(self.instants[i].src) * self.instants[i].src.duration
-        self.progression_dissonance = self.PD_A * total / float(len(self.notes)) + self.PD_B
+        self.characteristics['pd'] = self.PD_A * total / float(len(self.notes)) + self.PD_B
 
-    def get_key_dissonance(self):
+    def get_key_dissonant(self):
         # favors 1 and 5 primarily, then the pentatonic scale
         #                    1    2    3    4    5    6    7
         DISSONANCE_MAJOR = [0.0, 0.4, 0.4, 0.7, 0.2, 0.4, 1.0]
@@ -92,7 +88,20 @@ class Melody:
                 total += DISSONANCE_MINOR[n.degree - 1] * n.duration
             else:
                 total += DISSONANCE_MAJOR[n.degree - 1] * n.duration
-        self.key_dissonance = self.KD_A * total / float(len(self.notes)) + self.KD_B
+        self.characteristics['kd'] = self.KD_A * total / float(len(self.notes)) + self.KD_B
+
+    def get_rhythmic(self):
+        #                       1   and   2   and   3   and   4   and
+        RHYTHMIC_STYLE = []
+        RHYTHMIC_STYLE.append([1.0, 0.0, 0.5, 0.0, 0.7, 0.0, 0.5, 0.0]) # style 0
+        RHYTHMIC_STYLE.append([0.0, 1.0, 0.0, 0.5, 0.0, 0.7, 0.0, 0.5]) # style 1
+        RHYTHMIC_STYLE.append([0.5, 0.0, 1.0, 0.0, 0.5, 0.0, 0.7, 0.0]) # style 2
+        RHYTHMIC_STYLE.append([0.0, 0.5, 0.0, 1.0, 0.0, 5.0, 0.0, 0.7]) # style 3
+
+        total = 0.0
+        for n in self.notes:
+            total += RHYTHMIC_STYLE[self.rhythmic_style][n.location % 8] * n.duration
+        self.characteristics['r'] = self.R_A * total / float(len(self.notes)) + self.R_B
 
     def get_rhythmically_thematic(self):
         IDENTICAL_BONUS = 1.0
@@ -119,26 +128,25 @@ class Melody:
                     total += ONE_OFF_BONUS
                 elif count == 2:
                     total += TWO_OFF_BONUS
-        self.rhythmically_thematic = self.RT_A * total / float(len(measures)) + self.RT_B
+        self.characteristics['rt'] = self.RT_A * total / float(len(measures)) + self.RT_B
 
-    #def tonally_thematic():
-
-    def get_rhythmic(self):
-        #                       1   and   2   and   3   and   4   and
-        RHYTHMIC_STYLE = []
-        RHYTHMIC_STYLE.append([1.0, 0.0, 0.5, 0.0, 0.7, 0.0, 0.5, 0.0]) # style 0
-        RHYTHMIC_STYLE.append([0.0, 1.0, 0.0, 0.5, 0.0, 0.7, 0.0, 0.5]) # style 1
-        RHYTHMIC_STYLE.append([0.5, 0.0, 1.0, 0.0, 0.5, 0.0, 0.7, 0.0]) # style 2
-        RHYTHMIC_STYLE.append([0.0, 0.5, 0.0, 1.0, 0.0, 5.0, 0.0, 0.7]) # style 3
-
+    def get_tonally_thematic(self):
         total = 0.0
+        sequences = {}
+        notes = []
         for n in self.notes:
-            total += RHYTHMIC_STYLE[self.rhythmic_style][n.location % 8] * n.duration
-        self.rhythmic = self.R_A * total / float(len(self.notes)) + self.R_B
-
-    #def rhythmic_variation():
-
-    #def tonal_variation():
+            notes.append(n.name_with_octave)
+        for i in range(len(notes) - 1):
+            for j in range(i + 2, len(notes) + 1):
+                sequence = '-'.join(notes[i:j])
+                if sequences.has_key(sequence):
+                    sequences[sequence] += 1
+                else:
+                    sequences[sequence] = 1
+        for key, value in sequences.iteritems():
+            if value > 1:
+                total += float(value)
+        self.characteristics['tt'] = self.TT_A * total / float(len(self.notes)) + self.TT_B
 
     # OTHER FUNCTIONS
     def duration(self):
@@ -195,36 +203,44 @@ class Melody:
         for note_rest in self.notes_and_rests:
             if isinstance(note_rest, note.Rest):
                 ret += 'x' * note_rest.duration
+                ret += ' '
             else:
                 ret += str(note_rest.degree) + ',' + str(note_rest.octave)
                 ret += '-' * (note_rest.duration - 1)
+                ret += ' '
         return ret
 
-    def get_music21(self):
-        ret = music21.stream.Part()
-        ret.insert(music21.instrument.Piano())
-        for note_rest in self.notes_and_rests:
-            ret.append(note_rest.get_music21())
-        ret.transpose(5, inPlace=True)
+    def get_music21(self, repeat=2):
+        m = music21.stream.Part()
+        m.insert(music21.instrument.Piano())
+        for i in range(repeat):
+            for note_rest in self.notes_and_rests:
+                m.append(note_rest.get_music21())
+        m.transpose(5, inPlace=True)
+        p = self.chord_progression.get_music21(self.duration() * 2)
+        ret = music21.stream.Score()
+        ret.insert(m)
+        ret.insert(p)
         return ret
 
     def print_characteristics(self):
-        print("%s\n%s\nenergy: %f\nprogression dissonance: %f\nkey dissonance: %f\nrhythmic: %f\nrhythmically thematic: %f\n"\
-            % (self.ID, str(self), self.energy, self.progression_dissonance,\
-            self.key_dissonance, self.rhythmic, self.rhythmically_thematic))
+        print("%s\n%s" % (self.ID, str(self)))
+        for key, value in self.characteristics.iteritems():
+            print("%s: %f" % (key, value))
 
     def distance_to_target(self, target):
-        BUFFER = 1.0
         total = 0.0
-        characteristics1 = self.get_characteristics()
-        characteristics2 = target.get_characteristics()
-        for i in range(len(characteristics1)):
-            if characteristics2[i] is None:
+        for key, value in self.characteristics.iteritems():
+            if target.characteristics[key] is None:
                 continue
-            diff = abs(characteristics1[i] - characteristics2[i])
-            if diff < BUFFER:
+            if target.characteristics[key][0] > target.characteristics[key][1]:
+                raise NameError("Wrong ordering of target bounds.")
+            if value >= target.characteristics[key][0] and value <= target.characteristics[key][1]:
                 continue
-            total += (diff - BUFFER)**2
+            if value < target.characteristics[key][0]:
+                total += (target.characteristics[key][0] - value)**2
+            else:
+                total += (value - target.characteristics[key][1])**2
         return total
 
     def mutate(self, in_place=False):
@@ -280,6 +296,17 @@ class Melody:
             ret.ID = self.ID
             ret.parse(string)
             return ret
+
+# each characteristic should either be None or a range in form [LOWER_BOUND, UPPER_BOUND]
+class Target:
+    def __init__(self, e=None, pd=None, kd=None, r=None, rt=None, tt=None):
+        self.characteristics = {}
+        self.characteristics['e'] = e
+        self.characteristics['pd'] = pd
+        self.characteristics['kd'] = kd
+        self.characteristics['r'] = r
+        self.characteristics['rt'] = rt
+        self.characteristics['tt'] = tt
 
 def genetic_algorithm(target, ancestor, generations, num_offspring):
     if ancestor is None:
@@ -354,7 +381,7 @@ def create_random_melody(measures=4, chord_progression=progression.Progression([
 
     return ret
 
-def create_random_melodies(n, sort_by):
+def create_random_melodies(n, sort_by='none'):
     melodies = []
     for i in range(n):
         melodies.append(create_random_melody())

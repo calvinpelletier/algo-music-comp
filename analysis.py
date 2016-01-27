@@ -5,27 +5,15 @@
 import math
 
 def analyze_characteristics(melodies):
-    energies = []
-    progression_dissonances = []
-    key_dissonances = []
-    rhythmics = []
-    rhythmically_thematics = []
+    characteristics = {}
     for m in melodies:
-        energies.append(m.energy)
-        progression_dissonances.append(m.progression_dissonance)
-        key_dissonances.append(m.key_dissonance)
-        rhythmics.append(m.rhythmic)
-        rhythmically_thematics.append(m.rhythmically_thematic)
-    print("\nenergy avg: %f\nenergy std_dev: %f\n\n\
-progression_dissonance avg: %f\nprogression_dissonance std_dev: %f\n\n\
-key_dissonance avg: %f\nkey_dissonance std_dev: %f\n\n\
-rhythmic avg: %f\nrhythmic std_dev: %f\n\n\
-rhythmically_thematic avg: %f\nrhythmically_thematic std_dev: %f\n" % \
-        (average(energies), std_dev(energies),\
-        average(progression_dissonances), std_dev(progression_dissonances),\
-        average(key_dissonances), std_dev(key_dissonances),\
-        average(rhythmics), std_dev(rhythmics),\
-        average(rhythmically_thematics), std_dev(rhythmically_thematics)))
+        for key, value in m.characteristics.iteritems():
+            if characteristics.has_key(key):
+                characteristics[key].append(value)
+            else:
+                characteristics[key] = [value]
+    for key, value in characteristics.iteritems():
+        print("%s avg: %f\n%s std_dev: %f\n" % (key, average(value), key, std_dev(value)))
 
 def average(data):
     total = 0.0
