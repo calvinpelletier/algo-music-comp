@@ -22,6 +22,8 @@ def run():
             genetic()
         elif command == "quit":
             break
+        elif command == "load":
+            load()
         else:
             print("Unidentified command.")
         #except:
@@ -72,6 +74,13 @@ def genetic():
             result.print_characteristics()
         else:
             print("Unidentified command.")
+
+def load():
+    filepath = raw_input("Filepath?: ")
+    m = i_o.melody_from_txt_file(os.path.join(sys.path[0], filepath))
+    m.calculate_characteristics()
+    m.print_characteristics()
+    m.get_music21().show('midi')
 
 # HELPER FUNCTIONS
 def set_target():

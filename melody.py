@@ -15,18 +15,18 @@ import note
 
 class Melody:
     # CONSTANTS FOR NORMALIZING CHARACTERISTICS
-    E_A = 9.5
-    E_B = 8.0
+    E_A = 6.5
+    E_B = 7.0
     PD_A = 2.2
     PD_B = 12.7
     KD_A = 16.5
     KD_B = 5.4
-    R_A = 16.4
-    R_B = 8.8
+    R_A = 46.4
+    R_B = 4.8
     RT_A = 90.0
     RT_B = 16.1
-    TT_A = 30.0
-    TT_B = 16.0
+    TT_A = 35.0
+    TT_B = 17.0
 
     # INITIALIZATION FUNCTIONS
     def __init__(self, chord_progression=progression.Progression(['I', 'V', 'vi', 'IV']), minor=False, rhythmic_style=0):
@@ -63,7 +63,7 @@ class Melody:
     def get_energetic(self):
         total = 0.0
         for i in range(len(self.notes) - 1):
-            total += abs(note.degree_separation(self.notes[i], self.notes[i+1])) / float(self.notes[i].duration ** 2)
+            total += abs(note.degree_separation(self.notes[i], self.notes[i+1])) / float(self.notes[i].duration)
         self.characteristics['e'] = self.E_A * total / float(len(self.notes)) + self.E_B
 
     def get_progression_dissonant(self):
@@ -101,7 +101,7 @@ class Melody:
         total = 0.0
         for n in self.notes:
             total += RHYTHMIC_STYLE[self.rhythmic_style][n.location % 8] * n.duration
-        self.characteristics['r'] = self.R_A * total / float(len(self.notes)) + self.R_B
+        self.characteristics['r'] = self.R_A * total / float(self.duration()) + self.R_B
 
     def get_rhythmically_thematic(self):
         IDENTICAL_BONUS = 1.0
@@ -145,7 +145,8 @@ class Melody:
                     sequences[sequence] = 1
         for key, value in sequences.iteritems():
             if value > 1:
-                total += float(value)
+                if len(set(key.split('-'))) != 1:
+                    total += float(value)
         self.characteristics['tt'] = self.TT_A * total / float(len(self.notes)) + self.TT_B
 
     # OTHER FUNCTIONS
@@ -246,10 +247,10 @@ class Melody:
     def mutate(self, in_place=False):
         UPPER_NOTE_BOUND = note.Note(string='5,5')
         LOWER_NOTE_BOUND = note.Note(string='5,3')
-        CHANCE_OF_ALTERING = 0.1
+        CHANCE_OF_ALTERING = 0.2
         CHANCE_OF_REST = 0.05
-        CHANCE_OF_EXTENSION = 0.35
-        CHANCE_OF_NOTE = 0.6
+        CHANCE_OF_EXTENSION = 0.55
+        CHANCE_OF_NOTE = 0.4
         #                      -7    -6    -5    -4    -3    -2     -1    0    +1    +2    +3    +4    +5    +6    +7
         CHANCE_OF_MOVEMENT = [0.00, 0.00, 0.05, 0.05, 0.10, 0.10, 0.15, 0.10, 0.15, 0.10, 0.10, 0.05, 0.05, 0.00, 0.00]
 
@@ -314,6 +315,8 @@ def genetic_algorithm(target, ancestor, generations, num_offspring):
         parent.calculate_characteristics()
     else:
         parent = ancestor
+    if generations == 0 or num_offspring == 0:
+        return parent
     for i in range(generations):
         best = parent
         children = []
