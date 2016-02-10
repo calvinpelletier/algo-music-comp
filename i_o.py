@@ -21,6 +21,11 @@ def melody_from_txt_file(filepath):
     f.close()
     return ret
 
+def melodies_from_generated_folder():
+    ret = []
+    for filename in os.listdir(os.path.join(sys.path[0], "generated-songs")):
+        ret.append(melody_from_txt_file(os.path.join(sys.path[0], "generated-songs", filename)))
+    return ret
 
 def melodies_from_sample_folder():
     ret = []

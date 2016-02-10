@@ -15,18 +15,24 @@ import note
 
 class Melody:
     # CONSTANTS FOR NORMALIZING CHARACTERISTICS
-    E_A = 6.5
-    E_B = 7.0
+    EN_A = 8.5
+    EN_B = 6.0
     PD_A = 2.2
     PD_B = 12.7
     KD_A = 16.5
     KD_B = 5.4
-    R_A = 46.4
-    R_B = 4.8
+    RH_A = 46.4
+    RH_B = 4.8
     RT_A = 90.0
     RT_B = 16.1
     TT_A = 35.0
     TT_B = 17.0
+    RE_A = 21.0
+    RE_B = 0.0
+    DE_A = 43.0
+    DE_B = 0.0
+    SI_A = 50.0
+    SI_B = 15.0
 
     # INITIALIZATION FUNCTIONS
     def __init__(self, chord_progression=progression.Progression(['I', 'V', 'vi', 'IV']), minor=False, rhythmic_style=0):
@@ -44,12 +50,15 @@ class Melody:
 
         # CHARACTERISTICS
         self.characteristics = {}
-        self.characteristics['e'] = None
+        self.characteristics['en'] = None
         self.characteristics['pd'] = None
         self.characteristics['kd'] = None
-        self.characteristics['r'] = None
+        self.characteristics['rh'] = None
         self.characteristics['rt'] = None
         self.characteristics['tt'] = None
+        self.characteristics['re'] = None
+        self.characteristics['de'] = None
+        self.characteristics['si'] = None
 
     # CHARACTERISTIC FUNCTIONS
     def calculate_characteristics(self):
@@ -59,12 +68,18 @@ class Melody:
         self.get_rhythmic()
         self.get_rhythmically_thematic()
         self.get_tonally_thematic()
+        self.get_repetitive()
+        self.get_dense()
+        self.get_silent()
 
     def get_energetic(self):
         total = 0.0
         for i in range(len(self.notes) - 1):
             total += abs(note.degree_separation(self.notes[i], self.notes[i+1])) / float(self.notes[i].duration)
-        self.characteristics['e'] = self.E_A * total / float(len(self.notes)) + self.E_B
+        if len(self.notes) == 0:
+            self.characteristics['en'] = 0.0
+        else:
+            self.characteristics['en'] = self.EN_A * total / float(len(self.notes)) + self.EN_B
 
     def get_progression_dissonant(self):
         total = 0.0
@@ -74,7 +89,10 @@ class Melody:
             elif isinstance(self.instants[i], note.Extension):
                 if isinstance(self.instants[i].src, note.Note):
                     total += self.chord_progression.chord_at(i).dissonance_of_note(self.instants[i].src) * self.instants[i].src.duration
-        self.characteristics['pd'] = self.PD_A * total / float(len(self.notes)) + self.PD_B
+        if len(self.notes) == 0:
+            self.characteristics['pd'] = 0.0
+        else:
+            self.characteristics['pd'] = self.PD_A * total / float(len(self.notes)) + self.PD_B
 
     def get_key_dissonant(self):
         # favors 1 and 5 primarily, then the pentatonic scale
@@ -88,7 +106,10 @@ class Melody:
                 total += DISSONANCE_MINOR[n.degree - 1] * n.duration
             else:
                 total += DISSONANCE_MAJOR[n.degree - 1] * n.duration
-        self.characteristics['kd'] = self.KD_A * total / float(len(self.notes)) + self.KD_B
+        if len(self.notes) == 0:
+            self.characteristics['kd'] = 0.0
+        else:
+            self.characteristics['kd'] = self.KD_A * total / float(len(self.notes)) + self.KD_B
 
     def get_rhythmic(self):
         #                       1   and   2   and   3   and   4   and
@@ -101,7 +122,7 @@ class Melody:
         total = 0.0
         for n in self.notes:
             total += RHYTHMIC_STYLE[self.rhythmic_style][n.location % 8] * n.duration
-        self.characteristics['r'] = self.R_A * total / float(self.duration()) + self.R_B
+        self.characteristics['rh'] = self.RH_A * total / float(self.duration()) + self.RH_B
 
     def get_rhythmically_thematic(self):
         IDENTICAL_BONUS = 1.0
@@ -147,7 +168,59 @@ class Melody:
             if value > 1:
                 if len(set(key.split('-'))) != 1:
                     total += float(value)
-        self.characteristics['tt'] = self.TT_A * total / float(len(self.notes)) + self.TT_B
+        if len(self.notes) == 0:
+            self.characteristics['tt'] = 0.0
+        else:
+            self.characteristics['tt'] = self.TT_A * total / float(len(self.notes)) + self.TT_B
+
+    # wrote this when I was way too tired so it's pretty sloppy
+    # TODO: rewrite
+    def get_repetitive(self):
+        IDENTICAL = 15.0
+        NON_IDENTICAL = 5.0
+        total = 0.0
+        measures = []
+        for i in range(len(self.instants)):
+            if i % 8 == 0:
+                measures.append([])
+            if isinstance(self.instants[i], note.Note):
+                measures[i / 8].append(self.instants[i].degree_octave_str)
+            elif isinstance(self.instants[i], note.Extension):
+                if isinstance(self.instants[i].src, note.Note):
+                    measures[i / 8].append(self.instants[i].src.degree_octave_str + '-')
+                else:
+                    measures[i / 8].append('x')
+            else:
+                measures[i / 8].append('x')
+        for i in range(len(measures) - 1):
+            for j in range(i + 1, len(measures)):
+                count = 0
+                for k in range(8):
+                    if measures[i][k] != measures[j][k]:
+                        count += 1
+                if count == 0:
+                    total += IDENTICAL
+                else:
+                    total += NON_IDENTICAL / float(count)
+        self.characteristics['re'] = self.RE_A * total / float(len(measures)) + self.RE_B
+
+
+    def get_dense(self):
+        self.characteristics['de'] = self.DE_A * len(self.notes) / float(self.duration()) + self.DE_B
+
+    def get_silent(self):
+        total = 0
+        rest = True
+        for instant in self.instants:
+            if isinstance(instant, note.Rest):
+                total += 1
+                rest = True
+            elif isinstance(instant, note.Extension):
+                if rest:
+                    total += 1
+            else:
+                rest = False
+        self.characteristics['si'] = self.SI_A * total / float(self.duration()) + self.SI_B
 
     # OTHER FUNCTIONS
     def duration(self):
@@ -293,21 +366,24 @@ class Melody:
         if in_place:
             self.parse(string)
         else:
-            ret = Melody(chord_progression=self.chord_progression, minor=self.minor, rhythmic_style=self.minor)
+            ret = Melody(chord_progression=self.chord_progression, minor=self.minor, rhythmic_style=self.rhythmic_style)
             ret.ID = self.ID
             ret.parse(string)
             return ret
 
 # each characteristic should either be None or a range in form [LOWER_BOUND, UPPER_BOUND]
 class Target:
-    def __init__(self, e=None, pd=None, kd=None, r=None, rt=None, tt=None):
+    def __init__(self, en=None, pd=None, kd=None, rh=None, rt=None, tt=None, re=None, de=None, si=None):
         self.characteristics = {}
-        self.characteristics['e'] = e
+        self.characteristics['en'] = en
         self.characteristics['pd'] = pd
         self.characteristics['kd'] = kd
-        self.characteristics['r'] = r
+        self.characteristics['rh'] = rh
         self.characteristics['rt'] = rt
         self.characteristics['tt'] = tt
+        self.characteristics['re'] = re
+        self.characteristics['de'] = de
+        self.characteristics['si'] = si
 
 def genetic_algorithm(target, ancestor, generations, num_offspring):
     if ancestor is None:

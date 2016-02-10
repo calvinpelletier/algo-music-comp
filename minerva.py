@@ -77,10 +77,27 @@ def genetic():
 
 def load():
     filepath = raw_input("Filepath?: ")
-    m = i_o.melody_from_txt_file(os.path.join(sys.path[0], filepath))
-    m.calculate_characteristics()
-    m.print_characteristics()
-    m.get_music21().show('midi')
+    if filepath == "generated-songs":
+        melodies = i_o.melodies_from_generated_folder()
+    else:
+        melodies = []
+        melodies.append(i_o.melody_from_txt_file(os.path.join(sys.path[0], filepath)))
+    for i, m in enumerate(melodies):
+        print("~~~~~%d~~~~~" % i)
+        m.calculate_characteristics()
+        m.print_characteristics()
+    while True:
+        command = raw_input("Done. Now what?: ")
+        command = command.split(' ')
+        if command[0] == "play":
+            play(melodies[int(command[1])])
+        elif command[0] == "quit":
+            print("Going back to menu...")
+            break
+        elif command[0] == "show":
+            show(melodies[int(command[1])])
+        else:
+            print("Unidentified command.")
 
 # HELPER FUNCTIONS
 def set_target():
