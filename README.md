@@ -1,2 +1,2 @@
 # algo-music-comp
-Algorithmic music composition using music theory and machine learning.
+Algorithmic music composition using music theory and an evolutionary algorithm.
